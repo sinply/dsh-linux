@@ -1,6 +1,10 @@
 # dsh-linux
 
-[中文版 README.zh.md](README.zh.md)
+[中文简体](README.zh.md)
+
+> **Disclaimer:** This repository is an independent, third-party maintained packaging and operations project built on the public
+> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It is **not affiliated with, endorsed by, or representative of DeepSeek**;
+> the product names and trademarks that appear are referenced for identification only.
 
 An **offline, self-contained Linux distribution of DeepSeek Harness** for intranet deployment. The dsh CLI, Node.js runtime, all dependencies, the Web frontend, and the sandbox components (landlock-run + static bwrap) are packed into a single directory: **extract and run — zero installation, fully air-gapped**.
 
@@ -44,6 +48,10 @@ The detailed operator and build docs are in Chinese:
 
 - [Operator guide docs/usage.md](docs/usage.md) — deployment, configuration, troubleshooting, intranet LLM gateway
 - [Build guide docs/build.md](docs/build.md) — rebuilding this distribution from dsh source
+
+## Companion
+
+- [dsh-vscode](https://github.com/sinply/dsh-vscode) — VS Code extension to launch/manage the dsh Web GUI; shipped as an offline `.vsix` for intranet install.
 
 ## Repository layout
 

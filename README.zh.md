@@ -1,6 +1,10 @@
 # dsh-linux
 
-[English README](README.md)
+[English](README.md)
+
+> **声明：** 本仓库为第三方独立维护的打包与运维工程，基于公开的
+> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 构建，**与 DeepSeek 无关联、未经其认可，也不代表 DeepSeek 的任何立场**；
+> 文中出现的产品名称与商标仅作指称性引用。
 
 DeepSeek Harness 的 **内网离线 Linux 发行包**：把 dsh CLI、Node.js 运行时、全部依赖、Web 前端与沙箱组件（landlock-run + 静态 bwrap）打包成一个自包含目录，目标机 **解压即用、全程离线、零安装**。
 
@@ -42,6 +46,10 @@ cd dsh-linux-x64
 
 - [使用指南 docs/usage.md](docs/usage.md) —— 部署、配置、故障排查、内网 LLM 网关接入
 - [构建指南 docs/build.md](docs/build.md) —— 如何从 dsh 源码重新构建本发行包
+
+## 配套
+
+- [dsh-vscode](https://github.com/sinply/dsh-vscode) —— 在 VS Code 中启动/管理 dsh Web GUI 的插件，以离线 `.vsix` 形式内网安装。
 
 ## 仓库结构
 
