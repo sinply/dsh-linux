@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stage the packed tarballs into the WSL build stage.
 # Required env (paths must NOT be baked into this repo):
-#   DSH_TGZ_SRC      dir containing the dsh-family tarballs (e.g. <harness>/dist/npm)
+#   DSH_TGZ_SRC      dir containing the dsh-family tarballs (e.g. <harness>/dist/npm-a3)
 #   VENDOR_TGZ_SRC   dir containing the vendor tarballs        (e.g. <harness>/dist/npm-vendor)
 #   LANDLOCK_TGZ_SRC dir containing the landlock entry tarball (e.g. <harness>/dist/npm-landlock)
 # Optional:

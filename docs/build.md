@@ -30,12 +30,17 @@
 # 官方 profile 构建（host + client + web 前端）
 pnpm run build:official
 
-# 重打包（输出 dist/npm-a3、dist/npm-vendor-a3；landlock entry 在 dist/npm-landlock）
+# 重打包（输出 dist/npm-<suffix>、dist/npm-vendor-<suffix>；suffix 默认 a3）
 $env:HARNESS_ROOT = "<deepseek-harness 检出路径>"
 & scripts/linux-assemble/07-repack.ps1
 ```
 
-> `07-repack.ps1` 通过环境变量取路径（`HARNESS_ROOT`、可选 `PNPM_CMD`），仓库内不固化任何本机路径。
+> `07-repack.ps1` 通过环境变量取路径（`HARNESS_ROOT`、可选 `PNPM_CMD`/`OUT_SUFFIX`），仓库内不固化任何本机路径。
+
+**目录约定与清理**：
+
+- 每次打包写入 `dist/npm-<suffix>` / `dist/npm-vendor-<suffix>`，**不覆盖旧版本目录**；`07-repack.ps1` 会在打包前自动删除除"本次输出 + `npm-landlock`"以外的全部 `dist/npm*` 目录，旧版本产物无需手动清理。
+- `dist/npm-landlock`（landlock entry 0.1.1）与 dsh 版本无关，跨版本复用，**不要删除**；如需重新生成，在 `native/landlock-run` 下执行 `pnpm build:ts` 后按 `packages/entry` 的 `prepack` 校验打包。
 
 ### 3.2 WSL 组装（每步一个脚本，环境变量驱动）
 
