@@ -92,3 +92,26 @@ dsh-linux-x64/
 ├── node/              # Node.js 运行时（v22.x linux-x64）
 └── app/node_modules/  # dsh 全量依赖（linux-x64 平台解析，含 Web 前端资产）
 ```
+
+## 8. 精简变体（内网已有系统 Node）
+
+如果内网目标机已经装了 **Node.js ≥ 22.19**（推荐 24.x LTS，已实测 **24.14.0**），可用 `dsh-linux-x64-slim.tar.gz`：不内置 Node 运行时，包体约小 **55 MB**，其余内容与全包版一致。
+
+```bash
+tar -xzf dsh-linux-x64-slim.tar.gz
+cd dsh-linux-x64
+
+# node 在 PATH 上即可直接运行：
+./bin/dsh --version
+./bin/dsh web --no-open
+
+# 或指定 node 绝对路径（多版本共存时）：
+DSH_NODE_BIN=/usr/local/node-v24/bin/node ./bin/dsh web
+```
+
+要点：
+
+- 版本要求与 dsh 引擎一致（`^22.19.0 || >=24.0.0`）；低于 22.19 会在启动时报引擎不满足。
+- 沙箱仍走包内静态 `bin/bwrap`，与 Node 无关，行为同全包版。
+- 原生依赖（koffi / node-pty / sharp 等）为 N-API 预编译，Node 24 兼容（已实测 web 启动 + 沙箱冒烟）。
+- 全包版与精简版切换不影响 `DSH_HOME` 数据。

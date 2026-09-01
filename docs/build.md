@@ -69,7 +69,17 @@ STAGE_DIR=… wsl -u root -e bash scripts/linux-assemble/09-build-bwrap.sh
 # 产出静态 bwrap → 04 组装时自动进 bin/bwrap
 ```
 
-### 3.4 冒烟验收标准
+### 3.4 精简变体（系统 Node，可选）
+
+内网已有系统 Node（≥ 22.19，推荐 24.x LTS）时可额外产出一个不带运行时的变体，包体小约 55 MB：
+
+```bash
+# SYSTEM_NODE = 用于验证的 Node 目录（官方 node-v24.14.0-linux-x64 解压目录；默认 $STAGE/node24）
+SYSTEM_NODE=… OUT_DIR=… bash scripts/linux-assemble/10-assemble-slim.sh
+# 产出 dsh-linux-x64-slim.tar.gz（复用同一份 app/node_modules，无需重装依赖）
+```
+
+### 3.5 冒烟验收标准
 
 - `bin/dsh --version` 输出目标版本（如 `0.1.2-alpha.3`）
 - `06-smoke.sh` 全绿：landlock 探测 + 约束执行；**bwrap 解析自 `bin/bwrap`（包内静态）** + 探测 + 约束执行；`dsh web` 起服务并跟随重定向返回 200
