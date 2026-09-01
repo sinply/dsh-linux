@@ -79,7 +79,19 @@ SYSTEM_NODE=… OUT_DIR=… bash scripts/linux-assemble/10-assemble-slim.sh
 # 产出 dsh-linux-x64-slim.tar.gz（复用同一份 app/node_modules，无需重装依赖）
 ```
 
-### 3.5 冒烟验收标准
+### 3.5 Basic 变体（最小可用，可选）
+
+只用 API 提供商（内网 DeepSeek 网关）时，产出裁剪版：移除 Claude Code / Codex 子代理的**平台二进制包**（`@anthropic-ai/claude-agent-sdk-linux-x64` + `@openai/codex-linux-x64`，合计约 630 MB 解压）。JS 外壳、插件包与 OTel 遥测**保留**（`session-telemetry-otel` 在默认 base 层，删了会破坏启动）。基于 3.2/3.4 的完整 bundle 复制裁剪（硬链接，源 bundle 不动），不影响默认 profile 与 `DSH_HOME`：
+
+```bash
+# 前置：04（全包版）与 10（slim 版）已产出完整 bundle；09 已产出静态 bwrap
+OUT_DIR=… [SYSTEM_NODE=$STAGE/node24] bash scripts/linux-assemble/11-assemble-basic.sh
+# 产出 dsh-linux-x64-basic.tar.gz（自带 Node，~130 MB）与 dsh-linux-x64-basic-slim.tar.gz（系统 Node，~75 MB）
+```
+
+裁剪清单固化在脚本内（`PRUNE_DIRS`），仅为 proven-dead 的二进制包；boot 冒烟（版本 + web 200）在脚本内对两个变体分别执行，确保未破坏加载（曾因误删 `session-telemetry-otel` 启动失败，此后已改为保留）。
+
+### 3.6 冒烟验收标准
 
 - `bin/dsh --version` 输出目标版本（如 `0.1.2-alpha.3`）
 - `06-smoke.sh` 全绿：landlock 探测 + 约束执行；**bwrap 解析自 `bin/bwrap`（包内静态）** + 探测 + 约束执行；`dsh web` 起服务并跟随重定向返回 200

@@ -27,8 +27,14 @@ cd dsh-linux-x64
 |---|---|---|---|
 | 全包版（默认） | `dsh-linux-x64.tar.gz` | 内网机器**没有** Node：自带运行时，零安装 | ~358 MB |
 | 精简版（系统 Node） | `dsh-linux-x64-slim.tar.gz` | 内网机器**已有** Node（≥ 22.19，推荐 24.x LTS；已实测 24.14.0） | ~303 MB |
+| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 无 Node + 只用 API 提供商（砍子代理 CLI 二进制） | ~130 MB |
+| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 有 Node + 只用 API 提供商 | **~75 MB** |
 
-精简版不再内置 Node 运行时，`bin/dsh` 从 PATH（或 `DSH_NODE_BIN` 环境变量）解析系统 node；其余内容（全部依赖、Web 前端、静态 bwrap）与全包版完全一致。切换变体不影响 `DSH_HOME` 数据。
+- **slim 系**：不内置 Node，`bin/dsh` 从 PATH（或 `DSH_NODE_BIN`）解析系统 node；其余与对应全包版一致。
+- **basic 系**：裁剪了 Claude Code / Codex 子代理 CLI 后端与 OTel 遥测（对应插件在默认 profile 中不加载，且依赖完整可用的 full 版），API 提供商、Web 前端、附件、沙箱全部保留。
+- 切换变体（含 basic ↔ full）不影响 `DSH_HOME` 数据。
+
+默认**全包版**：自带 Node.js 运行时与全部功能，任何内网机器零安装即可用；需要更小时按上表选择。
 
 ## 文档
 

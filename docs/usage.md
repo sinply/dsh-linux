@@ -115,3 +115,25 @@ DSH_NODE_BIN=/usr/local/node-v24/bin/node ./bin/dsh web
 - 沙箱仍走包内静态 `bin/bwrap`，与 Node 无关，行为同全包版。
 - 原生依赖（koffi / node-pty / sharp 等）为 N-API 预编译，Node 24 兼容（已实测 web 启动 + 沙箱冒烟）。
 - 全包版与精简版切换不影响 `DSH_HOME` 数据。
+
+## 9. Basic 变体（最小可用，砍子代理 CLI 二进制）
+
+内网只用 **API 提供商**（DeepSeek 官方或自定义网关）时，可进一步裁剪 Claude Code / Codex 子代理**内置二进制**（合计约 630 MB 解压，仅实际唤起对应 CLI 时才需要），体积大幅下降：
+
+| 包 | 体积 | 相比默认 |
+|---|---|---|
+| `dsh-linux-x64-basic.tar.gz`（自带 Node） | **~130 MB** | -64% |
+| `dsh-linux-x64-basic-slim.tar.gz`（系统 Node） | **~75 MB** | -75% |
+
+**裁剪内容与限制**：
+
+- 仅移除平台二进制包：`@anthropic-ai/claude-agent-sdk-linux-x64`、`@openai/codex-linux-x64`（Claude Code / Codex 子代理的 CLI 可执行文件）。
+- **不可用**：Claude Code 子代理、Codex 子代理的 CLI 后端（JS 外壳与插件包仍在，但唤起时缺可执行文件；需要请用 full 系）。**设计上保证默认 profile 与启动不受影响**（这两个插件不在默认 web profile 中）。
+- **保留**：DeepSeek / Anthropic / OpenAI 等 API 提供商、Web 前端、附件图片（sharp）、OTel 遥测（`session-telemetry-otel` 在默认 base 层中，必须保留）、沙箱（静态 bwrap + landlock）。
+- 默认 profile 与 `DSH_HOME` 数据不受影响。
+
+```bash
+tar -xzf dsh-linux-x64-basic-slim.tar.gz   # 或 basic（自带 Node）
+cd dsh-linux-x64
+./bin/dsh web --no-open
+```
