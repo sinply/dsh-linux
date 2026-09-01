@@ -1,8 +1,71 @@
 # dsh-linux
 
+An **offline, self-contained Linux distribution of DeepSeek Harness** for intranet deployment. The dsh CLI, Node.js runtime, all dependencies, the Web frontend, and the sandbox components (landlock-run + static bwrap) are packed into a single directory: **extract and run — zero installation, fully air-gapped**.
+
+- Artifact: `dsh-linux-x64.tar.gz` (~358 MB; ~1.3 GB extracted)
+- Target platform: **Rocky Linux 8 / 9 (x86_64)**, glibc ≥ 2.28
+- Upstream: dsh = [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) (MIT); landlock-run uses the upstream per-platform prebuilt packages (static musl)
+
+## Quick start (intranet target host)
+
+```bash
+tar -xzf dsh-linux-x64.tar.gz
+cd dsh-linux-x64
+./bin/dsh --version        # 0.1.2-alpha.3
+./bin/dsh web              # Web GUI: open http://127.0.0.1:3080/?token=... printed at startup
+./bin/dsh web --no-open    # headless / intranet: do not try to open a browser
+```
+
+No Node.js / npm / other system dependencies are required. Sandbox components are bundled: Linux prefers the bundled static `bin/bwrap`; landlock-run is the fallback rung.
+
+> Some hardened RHEL 8 kernels disable unprivileged user namespaces, which makes the bwrap probe fail. Enable it with:
+> `sysctl -w kernel.unprivileged_userns_clone=1` (see [docs/usage.md](docs/usage.md#沙箱)).
+
+## Distribution variants
+
+| Variant | Package | When to use | Size (measured) |
+|---|---|---|---|
+| Full (default) | `dsh-linux-x64.tar.gz` | Intranet hosts **without** Node: bundled runtime, zero install | ~358 MB |
+| Slim (system Node) | `dsh-linux-x64-slim.tar.gz` | Intranet already runs Node (>= 22.19, 24.x LTS recommended; verified on 24.14.0) | ~303 MB |
+| Basic (bundled Node) | `dsh-linux-x64-basic.tar.gz` | No Node + API providers only (subagent CLI binaries pruned) | ~130 MB |
+| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | System Node + API providers only | **~75 MB** |
+
+- **Slim**: no bundled Node; `bin/dsh` resolves the system node from PATH (or the `DSH_NODE_BIN` env var). Everything else matches the corresponding full variant.
+- **Basic**: prunes the Claude Code / Codex subagent **CLI executables** (`claude-agent-sdk-linux-x64`, `codex-linux-x64`, ~630 MB extracted; only needed when actually spawning those CLIs, and their plugins are not wired into the default web profile). API providers, Web frontend, attachments, sandbox and OTel telemetry are all kept.
+- Switching variants (incl. basic ↔ full) does not affect `DSH_HOME` data.
+
+The **full** variant is the default: bundled Node runtime and every feature, zero-install on any intranet host; pick a smaller one from the table when size matters.
+
+## Documentation
+
+- [Operator guide docs/usage.md](docs/usage.md) — deployment, configuration, troubleshooting, intranet LLM gateway (Chinese)
+- [Build guide docs/build.md](docs/build.md) — rebuilding this distribution from dsh source (Chinese)
+
+## Repository layout
+
+```
+dsh-linux/
+├── README.md
+├── docs/                    # usage + build docs (Chinese)
+├── scripts/linux-assemble/  # reproducible build pipeline (01–11)
+└── dist/linux/              # artifact output (git-ignored)
+```
+
+`dist/` artifacts are not committed (the tarball is ~360 MB and a build result, not source); ship them via your intranet file transfer / release channel.
+
+## License
+
+BSD 3-Clause. Upstream dsh is copyrighted by DeepSeek; this repository is an independent packaging and operations project (see [LICENSE](LICENSE)).
+
+---
+
+# 中文版
+
+# dsh-linux
+
 DeepSeek Harness 的 **内网离线 Linux 发行包**：把 dsh CLI、Node.js 运行时、全部依赖、Web 前端与沙箱组件（landlock-run + 静态 bwrap）打包成一个自包含目录，目标机 **解压即用、全程离线、零安装**。
 
-- 产物：`dsh-linux-x64.tar.gz`（约 360 MB，解压后约 1.3 GB）
+- 产物：`dsh-linux-x64.tar.gz`（约 358 MB，解压后约 1.3 GB）
 - 目标平台：Rocky Linux 8 / 9（x86_64），glibc ≥ 2.28
 - 上游：dsh = [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（MIT）；landlock-run 使用上游发布的平台预编译包（静态 musl）
 
@@ -21,7 +84,7 @@ cd dsh-linux-x64
 > 个别 RHEL 8 内核默认关闭非特权 user namespace，会让 bwrap 探测失败。此时启用即可：
 > `sysctl -w kernel.unprivileged_userns_clone=1`（详见 [docs/usage.md](docs/usage.md#沙箱)）。
 
-## 两种发行变体
+## 发行变体
 
 | 变体 | 安装包 | 适用条件 | 体积（实测） |
 |---|---|---|---|
@@ -31,7 +94,7 @@ cd dsh-linux-x64
 | Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 有 Node + 只用 API 提供商 | **~75 MB** |
 
 - **slim 系**：不内置 Node，`bin/dsh` 从 PATH（或 `DSH_NODE_BIN`）解析系统 node；其余与对应全包版一致。
-- **basic 系**：裁剪了 Claude Code / Codex 子代理 CLI 后端与 OTel 遥测（对应插件在默认 profile 中不加载，且依赖完整可用的 full 版），API 提供商、Web 前端、附件、沙箱全部保留。
+- **basic 系**：裁剪了 Claude Code / Codex 子代理的 CLI 可执行文件（`claude-agent-sdk-linux-x64`、`codex-linux-x64`，合计约 630 MB 解压；仅实际唤起对应 CLI 时才需要，且插件不在默认 web profile 中）。API 提供商、Web 前端、附件、沙箱、OTel 遥测全部保留。
 - 切换变体（含 basic ↔ full）不影响 `DSH_HOME` 数据。
 
 默认**全包版**：自带 Node.js 运行时与全部功能，任何内网机器零安装即可用；需要更小时按上表选择。
@@ -47,7 +110,7 @@ cd dsh-linux-x64
 dsh-linux/
 ├── README.md
 ├── docs/                    # 使用 + 构建文档
-├── scripts/linux-assemble/  # 可复现构建脚本（01–09）
+├── scripts/linux-assemble/  # 可复现构建脚本（01–11）
 └── dist/linux/              # 产物出口（git 忽略，不入库）
 ```
 
