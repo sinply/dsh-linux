@@ -33,6 +33,15 @@ if [ -x "$STAGE/bwrap/bwrap" ]; then
   chmod +x "$BUNDLE_DIR/bin/bwrap"
 fi
 
+echo "== 3b. bundle check-env.sh (env self-check) =="
+if [ -n "${DSH_LINUX_REPO:-}" ] && [ -f "$DSH_LINUX_REPO/scripts/linux-assemble/check-env.sh" ]; then
+  cp "$DSH_LINUX_REPO/scripts/linux-assemble/check-env.sh" "$BUNDLE_DIR/bin/check-env.sh"
+  chmod +x "$BUNDLE_DIR/bin/check-env.sh"
+  echo "check-env.sh bundled"
+else
+  echo "WARN: DSH_LINUX_REPO unset/missing — slim bundle ships without check-env.sh"
+fi
+
 echo "== 4. write slim bin/dsh wrapper =="
 cat > "$BUNDLE_DIR/bin/dsh" <<'EOF'
 #!/usr/bin/env bash

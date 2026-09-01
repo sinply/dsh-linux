@@ -41,6 +41,15 @@ else
   echo "WARN: no static bwrap at $STAGE/bwrap/bwrap — bundle ships without it"
 fi
 
+echo "== 4c. bundle check-env.sh (env self-check) =="
+if [ -n "${DSH_LINUX_REPO:-}" ] && [ -f "$DSH_LINUX_REPO/scripts/linux-assemble/check-env.sh" ]; then
+  cp "$DSH_LINUX_REPO/scripts/linux-assemble/check-env.sh" "$BUNDLE_DIR/bin/check-env.sh"
+  chmod +x "$BUNDLE_DIR/bin/check-env.sh"
+  echo "check-env.sh bundled"
+else
+  echo "WARN: DSH_LINUX_REPO unset/missing — bundle ships without check-env.sh"
+fi
+
 echo "== 5. smoke: version via wrapper =="
 "$BUNDLE_DIR/bin/dsh" --version
 

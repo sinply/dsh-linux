@@ -137,3 +137,27 @@ tar -xzf dsh-linux-x64-basic-slim.tar.gz   # 或 basic（自带 Node）
 cd dsh-linux-x64
 ./bin/dsh web --no-open
 ```
+
+## 10. 环境自检（`bin/check-env.sh`）
+
+四个变体的 `bin/` 都随包带了一个环境自检脚本，内网主机直接跑：
+
+```bash
+./bin/check-env.sh                        # 用 DEEPSEEK_BASE_URL / DEEPSEEK_API_KEY（无则测默认 api.deepseek.com）
+./bin/check-env.sh http://内网网关/v1     # 或直接给 base URL
+```
+
+它会依次检查并明确区分：
+
+| 检查项 | 结果含义 |
+|---|---|
+| dsh / bwrap / landlock / node | 基础组件是否可用（含 Rocky 8 无 Landlock 属预期，沙箱走 bwrap） |
+| `{base}/models` 连通（不带 `-k`） | 端点/端口/防火墙可达性 |
+| 失败后再带 `-k` 重试 | 区分 **TLS 证书问题**（内网自签证书常见）与完全不可达 |
+| 带 key 发真实 `chat/completions` | 区分 **401/403 凭据错**、**404 路径前缀错**、000 连通/TLS 错 |
+
+**重要认知：模型配置页的绿点 = 配置有效（provider/model 已注册）；不代表端点真实可达。** 遇到"配置绿点 OK 但对话连不上网络"，先跑 `bin/check-env.sh` 定位是 DNS / 端口 / 证书 / 路径 / 凭据中的哪一层。
+
+**自签证书处理**（内网网关是 HTTPS 且证书不被信任时，自检会提示）：
+- 把内网 CA 证书加入 dsh 的 Node 信任链（`NODE_EXTRA_CA_CERTS=/path/ca.pem ./bin/dsh web`）；
+- 或测试期 `NODE_TLS_REJECT_UNAUTHORIZED=0 ./bin/dsh web`（仅测试，勿在生产用）。
