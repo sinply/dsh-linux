@@ -1,0 +1,13 @@
+# 构建产物（不入库）
+dist/
+*.tgz
+*.tar.gz
+*.log
+*-cookies.txt
+node/
+dsh-linux-x64/
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
