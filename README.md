@@ -31,10 +31,10 @@ No Node.js / npm / other system dependencies are required. Sandbox components ar
 
 | Variant | Package | When to use | Size (measured) |
 |---|---|---|---|
-| Full (default) | `dsh-linux-x64.tar.gz` | Intranet hosts **without** Node: bundled runtime, zero install | ~358 MB |
-| Slim (system Node) | `dsh-linux-x64-slim.tar.gz` | Intranet already runs Node (>= 22.19, 24.x LTS recommended; verified on 24.14.0) | ~303 MB |
-| Basic (bundled Node) | `dsh-linux-x64-basic.tar.gz` | No Node + API providers only (subagent CLI binaries pruned) | ~130 MB |
-| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | System Node + API providers only | **~75 MB** |
+| Full (default) | `dsh-linux-x64.tar.gz` | Intranet hosts **without** Node: bundled runtime, zero install | ~355 MB |
+| Slim (system Node) | `dsh-linux-x64-slim.tar.gz` | Intranet already runs Node (>= 22.19, 24.x LTS recommended; verified on 24.14.0) | ~300 MB |
+| Basic (bundled Node) | `dsh-linux-x64-basic.tar.gz` | No Node + API providers only (subagent CLI binaries pruned) | ~251 MB |
+| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | System Node + API providers only | **~196 MB** |
 
 - **Slim**: no bundled Node; `bin/dsh` resolves the system node from PATH (or the `DSH_NODE_BIN` env var). Everything else matches the corresponding full variant.
 - **Basic**: prunes the Claude Code / Codex subagent **CLI executables** (`claude-agent-sdk-linux-x64`, `codex-linux-x64`, ~630 MB extracted; only needed when actually spawning those CLIs, and their plugins are not wired into the default web profile). API providers, Web frontend, attachments, sandbox and OTel telemetry are all kept.

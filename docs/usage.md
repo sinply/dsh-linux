@@ -122,8 +122,8 @@ DSH_NODE_BIN=/usr/local/node-v24/bin/node ./bin/dsh web
 
 | 包 | 体积 | 相比默认 |
 |---|---|---|
-| `dsh-linux-x64-basic.tar.gz`（自带 Node） | **~130 MB** | -64% |
-| `dsh-linux-x64-basic-slim.tar.gz`（系统 Node） | **~75 MB** | -75% |
+| `dsh-linux-x64-basic.tar.gz`（自带 Node） | **~251 MB** | -29% |
+| `dsh-linux-x64-basic-slim.tar.gz`（系统 Node） | **~196 MB** | -35% |
 
 **裁剪内容与限制**：
 

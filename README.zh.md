@@ -31,10 +31,10 @@ cd dsh-linux-x64
 
 | 变体 | 安装包 | 适用条件 | 体积（实测） |
 |---|---|---|---|
-| 全包版（默认） | `dsh-linux-x64.tar.gz` | 内网机器**没有** Node：自带运行时，零安装 | ~358 MB |
-| 精简版（系统 Node） | `dsh-linux-x64-slim.tar.gz` | 内网机器**已有** Node（≥ 22.19，推荐 24.x LTS；已实测 24.14.0） | ~303 MB |
-| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 无 Node + 只用 API 提供商（砍子代理 CLI 二进制） | ~130 MB |
-| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 有 Node + 只用 API 提供商 | **~75 MB** |
+| 全包版（默认） | `dsh-linux-x64.tar.gz` | 内网机器**没有** Node：自带运行时，零安装 | ~355 MB |
+| 精简版（系统 Node） | `dsh-linux-x64-slim.tar.gz` | 内网机器**已有** Node（≥ 22.19，推荐 24.x LTS；已实测 24.14.0） | ~300 MB |
+| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 无 Node + 只用 API 提供商（砍子代理 CLI 二进制） | ~251 MB |
+| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 有 Node + 只用 API 提供商 | **~196 MB** |
 
 - **slim 系**：不内置 Node，`bin/dsh` 从 PATH（或 `DSH_NODE_BIN`）解析系统 node；其余与对应全包版一致。
 - **basic 系**：裁剪了 Claude Code / Codex 子代理的 CLI 可执行文件（`claude-agent-sdk-linux-x64`、`codex-linux-x64`，合计约 630 MB 解压；仅实际唤起对应 CLI 时才需要，且插件不在默认 web profile 中）。API 提供商、Web 前端、附件、沙箱、OTel 遥测全部保留。

@@ -35,7 +35,7 @@ prune_and_tar() {
   for d in "${PRUNE_DIRS[@]}"; do
     rm -rf "$workdir/app/node_modules/$d"
     local pnpm_name="${d/\//+}"
-    find "$workdir/app/node_modules/.pnpm" -maxdepth 1 -type d -name "${pnpm_name}@*" -exec rm -rf {} + 2>/dev/null || true
+    find "$workdir/app/node_modules/.pnpm" -maxdepth 1 -type d -name "${pnpm_name}*" -exec rm -rf {} + 2>/dev/null || true
   done
   # node-pty: keep only the platforms this distribution targets (both layouts)
   find "$workdir/app/node_modules/node-pty/prebuilds" -mindepth 1 -maxdepth 1 -type d \
