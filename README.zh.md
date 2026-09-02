@@ -17,7 +17,7 @@ DeepSeek Harness 的 **内网离线 Linux 发行包**：把 dsh CLI、Node.js �
 ```bash
 tar -xzf dsh-linux-x64.tar.gz
 cd dsh-linux-x64
-./bin/dsh --version        # 0.1.2-alpha.3
+./bin/dsh --version        # 0.1.2-alpha.4
 ./bin/dsh web              # Web GUI：访问启动输出里的 http://127.0.0.1:3080/?token=...
 ./bin/dsh web --no-open    # 无桌面/内网场景：不尝试自动打开浏览器
 ```

@@ -22,10 +22,10 @@ $vendorOut = "dist\$vendorName"
 
 Push-Location $root
 try {
-  # 文档先行约定：清理旧版本产物目录，保留本次输出与跨版本复用的 npm-landlock。
-  $keep = @('npm-landlock', $npmName, $vendorName)
-  Get-ChildItem 'dist' -Directory -Filter 'npm*' -ErrorAction SilentlyContinue |
-    Where-Object { $keep -notcontains $_.Name } |
+  # 文档先行约定：只清理"版本号后缀"的旧产物目录（npm-<ver> / npm-vendor-<ver>），
+  # 绝不碰跨版本复用的 npm-landlock。
+  Get-ChildItem 'dist' -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^npm(-vendor)?-\d' } |
     ForEach-Object {
       Write-Host "  clean stale: dist\$($_.Name)"
       Remove-Item $_.FullName -Recurse -Force

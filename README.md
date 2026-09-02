@@ -17,7 +17,7 @@ An **offline, self-contained Linux distribution of DeepSeek Harness** for intran
 ```bash
 tar -xzf dsh-linux-x64.tar.gz
 cd dsh-linux-x64
-./bin/dsh --version        # 0.1.2-alpha.3
+./bin/dsh --version        # 0.1.2-alpha.4
 ./bin/dsh web              # Web GUI: open http://127.0.0.1:3080/?token=... printed at startup
 ./bin/dsh web --no-open    # headless / intranet: do not try to open a browser
 ```

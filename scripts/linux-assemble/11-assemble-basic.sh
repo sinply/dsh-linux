@@ -30,12 +30,21 @@ prune_and_tar() {
   mkdir -p "$workbase"
   cp -al "$src" "$workdir"
   echo "prune: before=$(du -sh "$workdir" | cut -f1)"
+  # Works for both npm (hoisted: node_modules/<pkg>) and pnpm (isolated:
+  # node_modules/.pnpm/<scope>+<name>@<ver>/...) layouts.
   for d in "${PRUNE_DIRS[@]}"; do
     rm -rf "$workdir/app/node_modules/$d"
+    local pnpm_name="${d/\//+}"
+    find "$workdir/app/node_modules/.pnpm" -maxdepth 1 -type d -name "${pnpm_name}@*" -exec rm -rf {} + 2>/dev/null || true
   done
-  # node-pty: keep only the platforms this distribution targets
+  # node-pty: keep only the platforms this distribution targets (both layouts)
   find "$workdir/app/node_modules/node-pty/prebuilds" -mindepth 1 -maxdepth 1 -type d \
     ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} + 2>/dev/null || true
+  find "$workdir/app/node_modules/.pnpm" -maxdepth 1 -type d -name '*node-pty*' -print0 2>/dev/null |
+    while IFS= read -r -d "" d; do
+      find "$d/node_modules/node-pty/prebuilds" -mindepth 1 -maxdepth 1 -type d \
+        ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} + 2>/dev/null || true
+    done
   # debug sourcemaps (never loaded at runtime)
   find "$workdir/app/node_modules" -name "*.map" -size +32k -delete 2>/dev/null || true
   echo "prune: after =$(du -sh "$workdir" | cut -f1)"
