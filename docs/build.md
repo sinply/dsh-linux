@@ -44,7 +44,7 @@ $env:HARNESS_ROOT = "<deepseek-harness 检出路径>"
 
 ### 3.2 WSL 组装（每步一个脚本，环境变量驱动）
 
-> **安装器选择（0.1.2-alpha.4 起）**：npm 10 解析 `@openai/codex`（registry 上 4246 个版本、3.8MB 巨型 packument）时会无报错崩溃，因此 alpha.4 起改用 **pnpm 9** 安装（脚本 `34-pnpm-install.sh`，含 `supportedArchitectures` 平台过滤）。npm 方案（`02`）保留给更早版本。
+> **安装器选择（0.1.2-rc.1 起）**：npm 10 解析 `@openai/codex`（registry 上 4246 个版本、3.8MB 巨型 packument）时会无报错崩溃，因此 alpha.4 起改用 **pnpm 9** 安装（脚本 `34-pnpm-install.sh`，含 `supportedArchitectures` 平台过滤）。npm 方案（`02`）保留给更早版本。
 
 ```bash
 # 环境变量速查
@@ -95,7 +95,7 @@ OUT_DIR=… [SYSTEM_NODE=$STAGE/node24] bash scripts/linux-assemble/11-assemble-
 
 ### 3.6 冒烟验收标准
 
-- `bin/dsh --version` 输出目标版本（如 `0.1.2-alpha.4`）
+- `bin/dsh --version` 输出目标版本（如 `0.1.2-rc.1`）
 - `06-smoke.sh` 全绿：landlock 探测 + 约束执行；**bwrap 解析自 `bin/bwrap`（包内静态）** + 探测 + 约束执行；`dsh web` 起服务并跟随重定向返回 200
 - 构建日志无 `node-gyp rebuild`（无安装期编译）
 

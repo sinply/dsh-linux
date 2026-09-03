@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Install the staged a4 tarballs with pnpm 9 (npm 10.9.8 crashes on the
+# Install the staged tarballs with pnpm 9 (npm 10.9.8 crashes on the
 # @openai/codex 4246-version packument). Platform-filtered to linux-x64 glibc.
+# Cleans a previous install first (re-runnable for version changes).
 set -e
 STAGE="${STAGE_DIR:-$HOME/dsh-linux-build}"
 export PATH="$STAGE/node/bin:$PATH"
 cd "$STAGE/app"
+
+echo "== clean previous install =="
+rm -rf node_modules package-lock.json .pnpm-store 2>/dev/null || true
 
 echo "== package.json (file: deps) =="
 node -e '
@@ -17,8 +21,14 @@ for(const f of files){
   try { const p=JSON.parse(cp.execFileSync("tar",["-xOf",full,"package/package.json"],{encoding:"utf8",maxBuffer:32*1024*1024})); deps[p.name]="file:"+full; }
   catch(e){ console.error("PARSE_FAIL "+f); }
 }
-fs.writeFileSync(process.argv[2], JSON.stringify({name:"dsh-linux-offline",private:true,version:"0.0.0",dependencies:deps},null,2));
-console.log("deps="+Object.keys(deps).length);
+// pnpm resolves transitive @deepseek-ai/* ranges against the npm registry,
+// which 404s for unpublished family members (e.g. dsh-http-proxy). Override
+// every @deepseek-ai dep to the local tarball so resolution never leaves the
+// stage.
+const overrides={};
+for (const [name,spec] of Object.entries(deps)) if (name.startsWith("@deepseek-ai/")) overrides[name]=spec;
+fs.writeFileSync(process.argv[2], JSON.stringify({name:"dsh-linux-offline",private:true,version:"0.0.0",dependencies:deps,pnpm:{overrides}},null,2));
+console.log("deps="+Object.keys(deps).length+" overrides="+Object.keys(overrides).length);
 ' "$STAGE/tarballs" "$STAGE/app/package.json"
 
 echo "== .npmrc (linux x64 glibc only) =="
