@@ -8,7 +8,7 @@
 |---|---|
 | 系统 | Rocky Linux 8 或 9，x86_64 |
 | glibc | ≥ 2.28（Rocky 8 = 2.28，已踩线验证各原生二进制） |
-| 磁盘 | 解压后约 1.3 GB，建议预留 2 GB |
+| 磁盘 | 解压后约 1.2 GB，建议预留 2 GB |
 | 内核 | Rocky 9（5.14+）沙箱开箱即用；Rocky 8 需确认 user namespace（见 [沙箱](#3-沙箱)） |
 | 网络 | 不需要（全部离线）；仅 LLM 请求需要能到内网网关 |
 
@@ -56,7 +56,7 @@ Linux 沙箱运行链：**bwrap（首选）→ landlock-run（备用）**，逐�
   sysctl -w kernel.unprivileged_userns_clone=1   # 立即生效
   # 持久化：echo 'kernel.unprivileged_userns_clone=1' >> /etc/sysctl.d/99-dsh.conf
   ```
-- **landlock-run**：包内自带（`app/node_modules/@deepseek-ai/node-addon-landlock-run-linux-x64/bin/landlock-run`，静态 musl）。Rocky 9 内核 5.14+ 直接可用；Rocky 8（4.18）无 Landlock，跳过此 rung。
+- **landlock-run**：包内自带（`app/node_modules/@deepseek-ai/node-addon-system-linux-x64/bin/landlock-run`，静态 musl；0.1.2-rc.1 及更早为 `@deepseek-ai/node-addon-landlock-run-linux-x64`）。该包为预编译 Node-API addon，无需编译。Rocky 9 内核 5.14+ 直接可用；Rocky 8（4.18）无 Landlock，跳过此 rung。
 - 两者都不可用时，沙箱相关工具报 `SANDBOX_UNAVAILABLE`；non-sandboxed 功能（Web 启动、会话管理）不受影响。
 
 ## 4. 内网 LLM 出口
@@ -69,9 +69,22 @@ Linux 沙箱运行链：**bwrap（首选）→ landlock-run（备用）**，逐�
 
 参考上游文档 `docs/user/guide/providers.md`（deepseek-harness 仓库）。
 
+**注意默认模型**：0.1.5-rc.1 起默认 Chat Completions 模型为 `deepseek-flash`（`DeepSeek-V41-Flash`）。内网网关若只提供旧模型名（如 `deepseek-v4-flash`），请在上面的模型列表里显式配置，或调整网关允许的模型。
+
+**只能通过代理出网时**：本版支持 `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY`，写在启动环境或 `$DSH_HOME/.env`（默认 `~/.dsh/.env`）中；**项目自身的 `.env` 里设置代理变量会被拒绝启动**。限制：OTLP 遥测不走代理；`NO_PROXY` 不支持 CIDR；不支持 SOCKS；工作流 worker 不继承代理变量。企业 TLS 拦截代理需要 `NODE_EXTRA_CA_CERTS`。
+
 ## 5. 升级
 
-新版本发行包是完整自包含目录：解压新包后用新目录启动即可。旧数据在 `DSH_HOME`，可继续沿用；建议升级前备份 `DSH_HOME`。
+新版本发行包是完整自包含目录：解压新包后用新目录启动即可。旧数据在 `DSH_HOME`，可继续沿用。
+
+**从 0.1.2-rc.1 升级到 0.1.5-rc.1 的额外注意（会话格式迁移）**：
+
+- 0.1.5-rc.1 的会话磁盘格式为 **V3**（0.1.2-rc.1 为 V0）。首次用新版打开旧 `DSH_HOME` 会做一次性迁移并写入新代际，
+  已提交的历史代际字节不变。
+- **升级前备份 `$DSH_HOME`（默认 `~/.dsh`）**；迁移要求该目录可写、磁盘余量充足。
+- **迁移后不要回退到 0.1.2-rc.1**：旧版本读不了迁移后的会话。
+- 不要让两个 dsh 进程同时打开同一 `DSH_HOME`（本版有跨进程写租约，但迁移期仍应独占）。
+- 其他破坏性变更（默认模型改为 `deepseek-flash`、`str_replace_editor` 不再默认提供、原生包改名）见 `CHANGELOG.zh.md`。
 
 ## 6. 故障排查
 
@@ -81,15 +94,16 @@ Linux 沙箱运行链：**bwrap（首选）→ landlock-run（备用）**，逐�
 | 沙箱工具全部失败（`SANDBOX_UNAVAILABLE`） | 见 [沙箱](#3-沙箱)：查 `sysctl kernel.unprivileged_userns_clone`；Rocky 8 无 Landlock 属预期，bwrap 是关键 |
 | `dsh web` 启动后打不开 | 用 `--no-open` + 手动访问输出 URL；确认目标机 3080 端口可访问 |
 | 页面提示无法连接模型 | 内网 LLM 出口配置（见上）；确认网关可达、凭证正确 |
-| 磁盘不足 | 解压需 ~1.3 GB 空闲 |
+| 磁盘不足 | 解压需 ~1.2 GB 空闲 |
 
 ## 7. 内容构成
 
 ```
 dsh-linux-x64/
+├── BUILD-INFO.txt     # 本包 dsh 版本 / 上游 commit / 运行时 / 构建时间
 ├── bin/dsh            # 自包含启动器
 ├── bin/bwrap          # 静态编译的 bubblewrap（Linux 沙箱首选）
-├── node/              # Node.js 运行时（v22.x linux-x64）
+├── node/              # Node.js 运行时（v22.x linux-x64；slim/basic-slim 无此目录）
 └── app/node_modules/  # dsh 全量依赖（linux-x64 平台解析，含 Web 前端资产）
 ```
 
@@ -122,8 +136,8 @@ DSH_NODE_BIN=/usr/local/node-v24/bin/node ./bin/dsh web
 
 | 包 | 体积 | 相比默认 |
 |---|---|---|
-| `dsh-linux-x64-basic.tar.gz`（自带 Node） | **~249 MB** | -29% |
-| `dsh-linux-x64-basic-slim.tar.gz`（系统 Node） | **~195 MB** | -35% |
+| `dsh-linux-x64-basic.tar.gz`（自带 Node） | **252 MB** | -28% |
+| `dsh-linux-x64-basic-slim.tar.gz`（系统 Node） | **198 MB** | -33%（对比 slim） |
 
 **裁剪内容与限制**：
 

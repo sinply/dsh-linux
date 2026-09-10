@@ -8,7 +8,7 @@
 
 An **offline, self-contained Linux distribution of DeepSeek Harness** for intranet deployment. The dsh CLI, Node.js runtime, all dependencies, the Web frontend, and the sandbox components (landlock-run + static bwrap) are packed into a single directory: **extract and run — zero installation, fully air-gapped**.
 
-- Artifact: `dsh-linux-x64.tar.gz` (~358 MB; ~1.3 GB extracted)
+- Artifact: `dsh-linux-x64.tar.gz` (349 MB; ~1.2 GB extracted) — **dsh 0.1.5-rc.1**
 - Target platform: **Rocky Linux 8 / 9 (x86_64)**, glibc ≥ 2.28
 - Upstream: dsh = [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) (MIT); landlock-run uses the upstream per-platform prebuilt packages (static musl)
 
@@ -17,12 +17,15 @@ An **offline, self-contained Linux distribution of DeepSeek Harness** for intran
 ```bash
 tar -xzf dsh-linux-x64.tar.gz
 cd dsh-linux-x64
-./bin/dsh --version        # 0.1.2-rc.1
+cat BUILD-INFO.txt         # dsh version / upstream commit of this package
+./bin/dsh --version        # 0.1.5-rc.1
 ./bin/dsh web              # Web GUI: open http://127.0.0.1:3080/?token=... printed at startup
 ./bin/dsh web --no-open    # headless / intranet: do not try to open a browser
 ```
 
 No Node.js / npm / other system dependencies are required. Sandbox components are bundled: Linux prefers the bundled static `bin/bwrap`; landlock-run is the fallback rung.
+
+> **Upgrading from 0.1.2-rc.1?** The session on-disk format moved V0 → V3: back up `$DSH_HOME` before the first launch, and do not roll back afterwards. See [CHANGELOG.md](CHANGELOG.md) for the breaking changes (default model, `str_replace_editor`, native package rename).
 
 > Some hardened RHEL 8 kernels disable unprivileged user namespaces, which makes the bwrap probe fail. Enable it with:
 > `sysctl -w kernel.unprivileged_userns_clone=1` (see [docs/usage.md](docs/usage.md#沙箱)).
@@ -31,10 +34,10 @@ No Node.js / npm / other system dependencies are required. Sandbox components ar
 
 | Variant | Package | When to use | Size (measured) |
 |---|---|---|---|
-| Full (default) | `dsh-linux-x64.tar.gz` | Intranet hosts **without** Node: bundled runtime, zero install | ~354 MB |
-| Slim (system Node) | `dsh-linux-x64-slim.tar.gz` | Intranet already runs Node (>= 22.19, 24.x LTS recommended; verified on 24.14.0) | ~299 MB |
-| Basic (bundled Node) | `dsh-linux-x64-basic.tar.gz` | No Node + API providers only (subagent CLI binaries pruned) | ~249 MB |
-| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | System Node + API providers only | **~195 MB** |
+| Full (default) | `dsh-linux-x64.tar.gz` | Intranet hosts **without** Node: bundled runtime, zero install | 349 MB |
+| Slim (system Node) | `dsh-linux-x64-slim.tar.gz` | Intranet already runs Node (>= 22.19, 24.x LTS recommended; verified on 24.14.0) | 294 MB |
+| Basic (bundled Node) | `dsh-linux-x64-basic.tar.gz` | No Node + API providers only (subagent CLI binaries pruned) | 252 MB |
+| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | System Node + API providers only | 198 MB |
 
 - **Slim**: no bundled Node; `bin/dsh` resolves the system node from PATH (or the `DSH_NODE_BIN` env var). Everything else matches the corresponding full variant.
 - **Basic**: prunes the Claude Code / Codex subagent **CLI executables** (`claude-agent-sdk-linux-x64`, `codex-linux-x64`, ~630 MB extracted; only needed when actually spawning those CLIs, and their plugins are not wired into the default web profile). API providers, Web frontend, attachments, sandbox and OTel telemetry are all kept.
@@ -47,7 +50,8 @@ The **full** variant is the default: bundled Node runtime and every feature, zer
 The detailed operator and build docs are in Chinese:
 
 - [Operator guide docs/usage.md](docs/usage.md) — deployment, configuration, troubleshooting, intranet LLM gateway
-- [Build guide docs/build.md](docs/build.md) — rebuilding this distribution from dsh source
+- [Build guide docs/build.md](docs/build.md) — rebuilding this distribution from dsh source (one-shot: `powershell -File scripts\build-linux.ps1`)
+- [Release notes CHANGELOG.md](CHANGELOG.md) — per-release upstream changes, breaking changes, upgrade notes ([中文](CHANGELOG.zh.md))
 
 ## Companion
 
@@ -59,8 +63,11 @@ The detailed operator and build docs are in Chinese:
 dsh-linux/
 ├── README.md              # English
 ├── README.zh.md           # 中文
-├── docs/                  # usage + build docs (Chinese)
-├── scripts/linux-assemble/  # reproducible build pipeline (01–11)
+├── CHANGELOG.md           # release notes (English)
+├── CHANGELOG.zh.md        # 版本更新说明（中文）
+├── docs/                  # usage + build docs, operator README sources
+├── scripts/build-linux.ps1   # one-shot packaging (Windows + WSL)
+├── scripts/linux-assemble/   # reproducible build pipeline + build-all.sh driver
 └── dist/linux/            # artifact output (git-ignored)
 ```
 
