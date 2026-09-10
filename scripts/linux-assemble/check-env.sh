@@ -32,13 +32,18 @@ if [ -x "$ROOT/bin/bwrap" ]; then
 else
   warn "包内无 bwrap（basic 以外的变体应包含）"
 fi
-LL="$ROOT/app/node_modules/@deepseek-ai/node-addon-landlock-run-linux-x64/bin/landlock-run"
-if [ -x "$LL" ]; then
+# Native primitives moved from @deepseek-ai/node-addon-landlock-run-linux-x64
+# (<= 0.1.2) to @deepseek-ai/node-addon-system-linux-x64 (>= 0.1.5), and the
+# pnpm layout also stores a real copy under .pnpm; resolve by file name.
+LL="$(find "$ROOT/app/node_modules" -name landlock-run -type f 2>/dev/null | head -1)"
+if [ -n "$LL" ] && [ -x "$LL" ]; then
   V=$("$LL" --probe 2>&1)
   case "$V" in
     *enforced*) ok "landlock-run 探测: $V" ;;
     *) warn "landlock-run: $V （Rocky 8 无 Landlock 属预期，沙箱走 bwrap）" ;;
   esac
+else
+  warn "包内未找到 landlock-run（原生 system 包缺失？）"
 fi
 if ! command -v node >/dev/null 2>&1; then
   if [ -x "$ROOT/node/bin/node" ]; then

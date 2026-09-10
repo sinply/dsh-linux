@@ -20,27 +20,39 @@ $vendorName = "npm-vendor-$suffix"
 $npmOut = "dist\$npmName"
 $vendorOut = "dist\$vendorName"
 
+# Native tools write progress to stderr, which Windows PowerShell 5.1 turns into
+# an ErrorRecord; under ErrorActionPreference=Stop that aborts the run before the
+# exit code is even read. Keep those invocations non-terminating and decide on
+# $LASTEXITCODE instead.
+function Invoke-Pnpm([string[]]$Arguments) {
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & $pnpm @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
+  } finally { $ErrorActionPreference = $previous }
+  if ($LASTEXITCODE -ne 0) { throw "pnpm $($Arguments -join ' ') failed ($LASTEXITCODE)" }
+}
+
 Push-Location $root
 try {
   # 文档先行约定：只清理"版本号后缀"的旧产物目录（npm-<ver> / npm-vendor-<ver>），
   # 绝不碰跨版本复用的 npm-landlock。
   Get-ChildItem 'dist' -Directory -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -match '^npm(-vendor)?-\d' } |
+    Where-Object { $_.Name -match '^npm(-vendor)?-\d' -and $_.Name -ne $npmName -and $_.Name -ne $vendorName } |
     ForEach-Object {
       Write-Host "  clean stale: dist\$($_.Name)"
       Remove-Item $_.FullName -Recurse -Force
     }
-  Write-Host "== release:pack dsh family -> $npmOut =="
-  & $pnpm run release:pack --family dsh --out $npmOut
-  if ($LASTEXITCODE -ne 0) { throw "release:pack dsh failed ($LASTEXITCODE)" }
-  Write-Host "== release:pack vendor -> $vendorOut =="
-  & $pnpm run release:pack --family vendor --out $vendorOut
-  if ($LASTEXITCODE -ne 0) { throw "release:pack vendor failed ($LASTEXITCODE)" }
+  foreach ($pair in @(@('dsh', $npmOut), @('vendor', $vendorOut))) {
+    $family, $out = $pair
+    Write-Host "== release:pack $family -> $out =="
+    Invoke-Pnpm @('run', 'release:pack', '--family', $family, '--out', $out)
+  }
   Write-Host '== version distribution =='
   Get-ChildItem "$npmOut\*.tgz" | ForEach-Object {
     if ($_.Name -match '\d+\.\d+\.\d+[-a-zA-Z0-9.]*\.tgz$') { $matches[0] }
   } | Group-Object | Select-Object Name, Count | Format-Table -AutoSize
-  Write-Host '== done =='
+  Write-Host "== done: $((Get-ChildItem "$npmOut\*.tgz").Count) dsh + $((Get-ChildItem "$vendorOut\*.tgz").Count) vendor tarballs =="
 } finally {
   Pop-Location
 }

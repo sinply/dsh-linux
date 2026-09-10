@@ -14,6 +14,7 @@ SYSTEM_NODE="${SYSTEM_NODE:-$STAGE/node24}"
 BUNDLE_DIR="$STAGE/bundle-slim/dsh-linux-x64"
 TARBALL="$STAGE/dsh-linux-x64-slim.tar.gz"
 export PATH="$SYSTEM_NODE/bin:$PATH"
+. "$(dirname "$0")/lib-build-info.sh"
 
 echo "== system node for verification =="
 "$SYSTEM_NODE/bin/node" --version
@@ -60,6 +61,9 @@ chmod +x "$BUNDLE_DIR/bin/dsh"
 
 echo "== 5. smoke: version via system node =="
 "$BUNDLE_DIR/bin/dsh" --version
+
+echo "== 5b. BUILD-INFO.txt =="
+write_build_info "$BUNDLE_DIR" "slim (system Node.js, no bundled runtime)" "$("$SYSTEM_NODE/bin/node" --version) system"
 
 echo "== 6. smoke: bundled static bwrap rung =="
 "$STAGE/bwrap/bwrap" --version

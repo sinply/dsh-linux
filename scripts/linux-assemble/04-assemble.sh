@@ -3,11 +3,12 @@
 # the tarball, and copy the deliverable into dsh-linux/dist/linux.
 # Output root: set OUT_DIR to the directory that receives the deliverable.
 set -e
-STAGE="$HOME/dsh-linux-build"
+STAGE="${STAGE_DIR:-$HOME/dsh-linux-build}"
 OUT="${OUT_DIR:?set OUT_DIR (directory that receives dsh-linux-x64.tar.gz)}"
 BUNDLE_DIR="$STAGE/bundle/dsh-linux-x64"
 TARBALL="$STAGE/dsh-linux-x64.tar.gz"
 export PATH="$STAGE/node/bin:$PATH"
+. "$(dirname "$0")/lib-build-info.sh"
 
 echo "== 1. assemble bundle on native fs =="
 rm -rf "$STAGE/bundle" "$TARBALL"
@@ -53,6 +54,9 @@ fi
 echo "== 5. smoke: version via wrapper =="
 "$BUNDLE_DIR/bin/dsh" --version
 
+echo "== 5b. BUILD-INFO.txt =="
+write_build_info "$BUNDLE_DIR" "full (bundled Node.js)" "$("$STAGE/node/bin/node" --version) bundled"
+
 echo "== 6. bundle layout + sizes =="
 ls -la "$BUNDLE_DIR"
 du -sh "$BUNDLE_DIR" "$BUNDLE_DIR/node" "$BUNDLE_DIR/app/node_modules"
@@ -66,4 +70,4 @@ mkdir -p "$OUT"
 cp "$TARBALL" "$OUT/dsh-linux-x64.tar.gz"
 ls -lh "$OUT"
 
-echo "== done. deliverable: D:\\Exercise\\AI\\dsh\\dsh-linux\\dist\\linux\\dsh-linux-x64.tar.gz =="
+echo "== done. deliverable: $OUT/dsh-linux-x64.tar.gz =="

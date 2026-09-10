@@ -9,6 +9,7 @@ set -e
 STAGE="${STAGE_DIR:-$HOME/dsh-linux-build}"
 : "${OUT_DIR:?set OUT_DIR (deliverable directory)}"
 SYSTEM_NODE="${SYSTEM_NODE:-$STAGE/node24}"
+. "$(dirname "$0")/lib-build-info.sh"
 
 FULL_SRC="$STAGE/bundle/dsh-linux-x64"
 SLIM_SRC="$STAGE/bundle-slim/dsh-linux-x64"
@@ -24,7 +25,7 @@ PRUNE_DIRS=(
 )
 
 prune_and_tar() {
-  local src="$1" out_tgz="$2" workbase="$3"
+  local src="$1" out_tgz="$2" workbase="$3" variant="$4" runtime="$5"
   local workdir="$workbase/dsh-linux-x64"
   rm -rf "$workbase"
   mkdir -p "$workbase"
@@ -48,6 +49,7 @@ prune_and_tar() {
   # debug sourcemaps (never loaded at runtime)
   find "$workdir/app/node_modules" -name "*.map" -size +32k -delete 2>/dev/null || true
   echo "prune: after =$(du -sh "$workdir" | cut -f1)"
+  write_build_info "$workdir" "$variant" "$runtime"
   tar -C "$workbase" -czf "$out_tgz" dsh-linux-x64
   ls -lh "$out_tgz" | awk '{print $5}'
 }
@@ -82,12 +84,14 @@ smoke_web() {  # $1=bundle dir  $2=node bin ("" = bundled)  $3=tag
 }
 
 echo "== 1. basic bundled (own node) =="
-prune_and_tar "$FULL_SRC" "$OUT_DIR/dsh-linux-x64-basic.tar.gz" "$STAGE/basic-bundled"
+prune_and_tar "$FULL_SRC" "$OUT_DIR/dsh-linux-x64-basic.tar.gz" "$STAGE/basic-bundled" \
+  "basic (bundled Node.js, subagent CLI binaries pruned)" "$("$STAGE/node/bin/node" --version) bundled"
 smoke_web "$STAGE/basic-bundled/dsh-linux-x64" "" "basic"
 
 echo "== 2. basic slim (system node $SYSTEM_NODE) =="
 test -x "$SYSTEM_NODE/bin/node" || { echo "SYSTEM_NODE missing: $SYSTEM_NODE"; exit 1; }
-prune_and_tar "$SLIM_SRC" "$OUT_DIR/dsh-linux-x64-basic-slim.tar.gz" "$STAGE/basic-slim"
+prune_and_tar "$SLIM_SRC" "$OUT_DIR/dsh-linux-x64-basic-slim.tar.gz" "$STAGE/basic-slim" \
+  "basic slim (system Node.js, subagent CLI binaries pruned)" "$("$SYSTEM_NODE/bin/node" --version) system"
 smoke_web "$STAGE/basic-slim/dsh-linux-x64" "$SYSTEM_NODE/bin/node" "basic-slim"
 
 echo "== done. deliverables in $OUT_DIR =="

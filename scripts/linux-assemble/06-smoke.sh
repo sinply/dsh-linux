@@ -14,7 +14,10 @@ echo "== 1. catalog version =="
 "$DSH" --version
 
 echo "== 2. landlock rung (bundled static launcher) =="
-LL="$BUNDLE_DIR/app/node_modules/@deepseek-ai/node-addon-landlock-run-linux-x64/bin/landlock-run"
+# The platform package name changed upstream (node-addon-landlock-run-linux-x64
+# <= 0.1.2, node-addon-system-linux-x64 >= 0.1.5); resolve by file name.
+LL="$(find "$BUNDLE_DIR/app/node_modules" -name landlock-run -type f | head -1)"
+[ -n "$LL" ] || { echo "landlock-run not found in bundle"; exit 1; }
 file "$LL" | head -1
 "$LL" --probe 2>&1 || true
 echo -n "confined run (read-only /): "
