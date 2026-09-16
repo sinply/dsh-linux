@@ -35,8 +35,9 @@ function Invoke-Pnpm([string[]]$Arguments) {
 
 Push-Location $root
 try {
-  # 文档先行约定：只清理"版本号后缀"的旧产物目录（npm-<ver> / npm-vendor-<ver>），
-  # 绝不碰跨版本复用的 npm-landlock。
+  # Repo convention: only clean stale version-suffixed output directories
+  # (npm-<version> / npm-vendor-<version>); never touch npm-landlock, which is
+  # reused across versions, and never the directories this run writes to.
   Get-ChildItem 'dist' -Directory -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -match '^npm(-vendor)?-\d' -and $_.Name -ne $npmName -and $_.Name -ne $vendorName } |
     ForEach-Object {

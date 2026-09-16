@@ -79,10 +79,38 @@ function Fail([string]$Text) { throw $Text }
 function Get-GitHubToken {
   if ($env:GH_TOKEN) { return $env:GH_TOKEN }
   if ($env:GITHUB_TOKEN) { return $env:GITHUB_TOKEN }
-  $credential = @('protocol=https', 'host=github.com', '') -join "`n" | git credential fill 2>$null
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $credential = @('protocol=https', 'host=github.com', '') -join "`n" | git credential fill 2>$null
+  } finally { $ErrorActionPreference = $previous }
   $password = ($credential | Select-String '^password=').Line -replace '^password=', ''
   if (-not $password) { Fail 'no GitHub token: run `gh auth login`, or set $env:GH_TOKEN' }
   return $password
+}
+
+# git and gh report progress on stderr, which Windows PowerShell 5.1 wraps in an
+# ErrorRecord; under ErrorActionPreference=Stop that aborts the run before the
+# exit code is read. Keep these calls non-terminating and decide on $LASTEXITCODE.
+function Invoke-Native([string]$Exe, [string[]]$Arguments) {
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & $Exe @Arguments 2>&1 | ForEach-Object { Write-Info $_ }
+  } finally { $ErrorActionPreference = $previous }
+  if ($LASTEXITCODE -ne 0) { Fail "$Exe $($Arguments -join ' ') failed (exit $LASTEXITCODE)" }
+}
+
+function Invoke-Git([string[]]$Arguments) { Invoke-Native 'git' (@('-C', $RepoRoot) + $Arguments) }
+function Invoke-Gh([string[]]$Arguments) { Invoke-Native 'gh' $Arguments }
+
+# Capture output of a command whose non-zero exit is expected (probing for an
+# existing release), without raising or aborting.
+function Invoke-Capture([scriptblock]$Command) {
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try { return (& $Command 2>$null | Out-String).Trim() }
+  finally { $ErrorActionPreference = $previous }
 }
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -183,44 +211,36 @@ if ($DryRun) { Write-Host ''; Write-Host 'DryRun: no tag, release, or upload per
 # ------------------------------------------------------------------- tag, push
 Write-Phase "tag $Tag"
 $env:GH_TOKEN = Get-GitHubToken
-$existingLocal = (& git -C $RepoRoot tag --list $Tag)
+$existingLocal = Invoke-Capture { git -C $RepoRoot tag --list $Tag }
 if ($existingLocal) {
   Write-Info "local tag $Tag already exists (left as is)"
 } else {
-  & git -C $RepoRoot tag $Tag $Commit
-  if ($LASTEXITCODE -ne 0) { Fail "git tag $Tag failed" }
+  Invoke-Git @('tag', $Tag, $Commit)
   Write-Info "created local tag $Tag -> $Commit"
 }
-& git -C $RepoRoot push origin "refs/tags/$Tag" 2>&1 | ForEach-Object { Write-Info $_ }
-if ($LASTEXITCODE -ne 0) { Fail "git push tag $Tag failed" }
+Invoke-Git @('push', 'origin', "refs/tags/$Tag")
 Write-Info 'tag pushed'
 
 # --------------------------------------------------------------------- release
 Write-Phase "publish release $Tag"
-$previous = $ErrorActionPreference
-$ErrorActionPreference = 'Continue'
-try {
-  $exists = (& gh release view $Tag --json tagName 2>$null | Out-String).Trim()
-} finally { $ErrorActionPreference = $previous }
+$exists = Invoke-Capture { gh release view $Tag --json tagName }
 if ($exists) {
-  Write-Info 'release exists — updating title/body'
-  & gh release edit $Tag --title $title --notes-file $NotesFile
-  if ($LASTEXITCODE -ne 0) { Fail 'gh release edit failed' }
+  Write-Info 'release exists - updating title/body'
+  Invoke-Gh @('release', 'edit', $Tag, '--title', $title, '--notes-file', $NotesFile)
 } else {
-  $args = @('release', 'create', $Tag, '--title', $title, '--notes-file', $NotesFile)
-  if ($Draft) { $args += '--draft' }
-  if ($Prerelease) { $args += '--prerelease' }
-  & gh @args
-  if ($LASTEXITCODE -ne 0) { Fail 'gh release create failed' }
+  $ghArgs = @('release', 'create', $Tag, '--title', $title, '--notes-file', $NotesFile)
+  if ($Draft) { $ghArgs += '--draft' }
+  if ($Prerelease) { $ghArgs += '--prerelease' }
+  Invoke-Gh $ghArgs
 }
-if (-not $SkipUpload) {
-  Write-Host ''
-  Write-Info "uploading $($Assets.Count) asset(s) — this streams ~$([math]::Round((($Assets | ForEach-Object { (Get-Item $_).Length }) | Measure-Object -Sum).Sum / 1GB, 2)) GB"
-  & gh release upload $Tag @Assets --clobber
-  if ($LASTEXITCODE -ne 0) { Fail 'gh release upload failed' }
-} else {
+if ($SkipUpload) {
   Write-Info 'asset upload skipped (-SkipUpload)'
+} else {
+  $totalGb = [math]::Round(((($Assets | ForEach-Object { (Get-Item $_).Length }) | Measure-Object -Sum).Sum) / 1GB, 2)
+  Write-Host ''
+  Write-Info "uploading $($Assets.Count) asset(s), ~$totalGb GB streamed"
+  Invoke-Gh (@('release', 'upload', $Tag) + $Assets + @('--clobber'))
 }
 
 Write-Phase 'release published'
-& gh release view $Tag --json url,isDraft,isPrerelease,assets --template '{{.url}}{{"\n"}}draft={{.isDraft}} prerelease={{.isPrerelease}}{{"\n"}}{{range .assets}}{{.name}}{{"  "}}{{.size}}{{"\n"}}{{end}}'
+Invoke-Gh @('release', 'view', $Tag)
