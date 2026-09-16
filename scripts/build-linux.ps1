@@ -114,7 +114,7 @@ function Invoke-Logged([string]$Label, [string]$LogFile, [scriptblock]$Command) 
   $previous = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    & $Command *>&1 | Tee-Object -FilePath $LogFile
+    & $Command *>&1 | Tee-Object -FilePath $LogFile -Encoding utf8
   } finally { $ErrorActionPreference = $previous }
   if ($LASTEXITCODE -ne 0) { Fail "$Label failed (exit $LASTEXITCODE) — log: $LogFile" }
 }
@@ -161,7 +161,7 @@ if (-not (Test-Path (Join-Path $HarnessRoot 'package.json'))) { Fail "no package
 $HarnessRoot = (Resolve-Path -LiteralPath $HarnessRoot).Path
 
 if (-not $Version) {
-  $Version = (Get-Content (Join-Path $HarnessRoot 'package.json') -Raw | ConvertFrom-Json).version
+  $Version = (Get-Content (Join-Path $HarnessRoot 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
 }
 if (-not $Version) { Fail 'cannot determine the dsh version; pass -Version' }
 if (-not $Suffix) { $Suffix = $Version }
