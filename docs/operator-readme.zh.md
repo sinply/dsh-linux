@@ -11,7 +11,7 @@
 | 组件 | 版本 | 说明 |
 |---|---|---|
 | Node.js | v22.23.2 (linux-x64) | 官方二进制，glibc ≥ 2.28 |
-| dsh CLI | 0.1.5-rc.1 | `@deepseek-ai/dsh` 全量依赖（linux-x64 平台解析），含 web 前端资产 |
+| dsh CLI | 0.1.7-rc.1 | `@deepseek-ai/dsh` 全量依赖（linux-x64 平台解析），含 web 前端资产 |
 | 原生沙箱组件 | `@deepseek-ai/node-addon-system` 0.1.2 | 静态 `landlock-run` launcher + 预编译 Node-API flock addon（glibc/musl 均预置） |
 | bubblewrap | 0.11.0（静态 musl） | `bin/bwrap`，Linux 沙箱首选 rung |
 
@@ -19,10 +19,10 @@
 
 | 变体 | 包 | 体积 | 适用 |
 |---|---|---|---|
-| 全包版（本包） | `dsh-linux-x64.tar.gz` | 349 MB | 内网机器无 Node，零安装 |
-| 精简版 | `dsh-linux-x64-slim.tar.gz` | 294 MB | 内网已有系统 Node（≥22.19，推荐 24.x；已实测 24.14.0） |
-| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 252 MB | 无 Node + 只用 API 提供商（砍子代理 CLI 二进制） |
-| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 198 MB | 有 Node + 只用 API 提供商 |
+| 全包版（本包） | `dsh-linux-x64.tar.gz` | 440 MB | 内网机器无 Node，零安装 |
+| 精简版 | `dsh-linux-x64-slim.tar.gz` | 386 MB | 内网已有系统 Node（≥22.19，推荐 24.x；已实测 24.14.0） |
+| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 343 MB | 无 Node + 只用 API 提供商（砍子代理 CLI 二进制） |
+| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 288 MB | 有 Node + 只用 API 提供商 |
 
 - **slim 系**：不内置 Node，`bin/dsh` 从 PATH（或 `DSH_NODE_BIN`）解析系统 node，其余与对应全包版一致。
 - **basic 系**：移除 Claude Code / Codex 子代理的 CLI 可执行文件（`claude-agent-sdk-linux-x64`、`codex-linux-x64`，合计约 630 MB 解压）；API 提供商、Web 前端、附件、沙箱、OTel 遥测全部保留；若之后需要子代理 CLI，改用 full 系。
@@ -35,7 +35,7 @@ tar -xzf dsh-linux-x64.tar.gz
 cd dsh-linux-x64
 
 cat BUILD-INFO.txt           # 本包对应的 dsh 版本与上游 commit
-./bin/dsh --version          # 0.1.5-rc.1
+./bin/dsh --version          # 0.1.7-rc.1
 ./bin/dsh web                # Web GUI，启动后访问输出里的 http://127.0.0.1:3080/?token=...
 ./bin/dsh web --no-open      # 不自动打开浏览器（内网/无桌面场景）
 DSH_HOME=/your/home ./bin/dsh web   # 指定数据目录（会话、profile 等）；默认 ~/.dsh
@@ -43,19 +43,21 @@ DSH_HOME=/your/home ./bin/dsh web   # 指定数据目录（会话、profile 等�
 
 `bin/dsh` 会把捆绑的 Node（full 系）与 `bin/`（静态 bwrap）加入 PATH 再启动 CLI，子进程（config 子进程、插件等）都走内置运行时。
 
-## 升级注意（从 0.1.2-rc.1 升级必读）
+## 升级注意（从 0.1.5-rc.1 升级必读）
 
-- **会话磁盘格式已升到 V3**（0.1.2-rc.1 为 V0）：用本包首次打开旧 `DSH_HOME` 会做一次性迁移并写入新代际。**升级前请备份 `$DSH_HOME`（默认 `~/.dsh`）；迁移后不要回退到 0.1.2-rc.1**，旧版本读不了迁移后的会话。
-- 迁移要求 home 目录可写、磁盘余量充足，且不要让两个 dsh 进程同时打开同一 `DSH_HOME`。
-- 默认 Chat Completions 模型改为 **`deepseek-flash`**（`DeepSeek-V41-Flash`）。内网网关若只提供旧模型名，请在 Settings → Providers 里显式配置模型列表。
-- `str_replace_editor` 不再由默认 profile 提供，文件编辑使用 `read` / `write` / `edit`。
+- **会话磁盘格式已升到 V4**（0.1.5-rc.1 为 V3）：用本包首次打开旧 `DSH_HOME` 会做一次性迁移并写入新代际。**升级前请备份 `$DSH_HOME`（默认 `~/.dsh`）；迁移后不要回退到 0.1.5-rc.1**（仓库内没有 V4→V3 的反向迁移），旧版本读不了迁移后的会话。
+- **`$DSH_HOME/settings.yaml` 会被一次性导入并改名为 `settings.yaml.imported`**（被当前组合拒绝的 section 只保留在改名后的文件里）。升级前请一并备份该文件。
+- 预设机制改为声明式 profile patch：旧的 `roots` / `includeShippedRoot` / `includeUserRoot` / `USER_PRESET_DIR` 与自建预设目录都不再被读取。
+- 配置项 `spill-policy.maxInlineBytes` → `maxInlineTokens`；`tool-ralph` 默认禁用。
+- 默认模型标识仍为 `deepseek-flash`（显示名 `DeepSeek-V41-Flash`，目录新增 `deepseek-v4-pro`）。
 - 完整清单见随包 `CHANGELOG.zh.md`（仓库：https://github.com/sinply/dsh-linux ）。
 
 ## 兼容性（已在构建机实测）
 
 - 目标平台：**Rocky Linux 8 / 9, x86_64**；glibc ≥ 2.28（Rocky 8 = 2.28）。
-- 全部原生二进制的 GLIBC 符号审计：node-pty 2.28（踩线）、koffi 2.17、rolldown 2.16、sharp 2.17、lightningcss 2.14、landlock/esbuild 静态 —— 均 ≤ 2.28。
-- 安装过程零本地编译（0.1.5 起原生 system 包为**预编译** Node-API addon，构建期也不需要 python/make/g++）。
+- 原生二进制的 GLIBC 符号审计：node-pty 2.28（踩线）、koffi 2.17、sharp 2.17、rolldown 2.16、lightningcss 2.14、`node-addon-require-builtin` 2.14、landlock/esbuild 静态 —— 均 ≤ 2.28。
+- **例外（0.1.7-rc.1 新增）**：三个实验能力的原生 addon 要求更高 glibc，**Rocky 8 上无法加载**：`sherpa-onnx`（语音转写）2.32、`@trycua/cua-driver`（computer-use）2.30、`@ubjs/node`（browser-use）2.30。它们都不在默认 profile 中，**默认功能（Web GUI、会话、沙箱、模型请求）不受影响**；Rocky 9（glibc ≥ 2.34）不受限。
+- 安装过程零本地编译（原生 system 包为**预编译** Node-API addon，目标机与构建机都不需要 python/make/g++）。
 - 冒烟测试（WSL 构建机，内核 6.6）：landlock launcher 探测 + 约束执行 ✅；bwrap 探测 + 约束执行 ✅；`dsh web` 启动、token URL 跟随重定向返回 200 ✅；四个变体各自启动校验 ✅。
 
 ## 沙箱说明（重要，Rocky 8）
@@ -106,7 +108,7 @@ dsh-linux-x64/
 
 ## 构建记录
 
-- 版本来源：源码 `deepseek-harness`（HEAD `2377c272a8` = `dsh-v0.1.5-rc.1`）经 `build:official` + `release:pack` 重新打包。
-- 依赖：274 个 tarball（265 dsh + 9 vendor），pnpm 9 安装（linux-x64 glibc 平台过滤 + musl 变体瘦身）；原生沙箱组件 `@deepseek-ai/node-addon-system` 0.1.2 由 registry 解析（预编译 addon）。
+- 版本来源：源码 `deepseek-harness`（HEAD `46a7f68b09` = `dsh-v0.1.7-rc.1`，工作树干净）经 `build:official` + `release:pack` 重新打包。
+- 依赖：318 个 tarball（309 dsh + 9 vendor），pnpm 9 安装（linux-x64 glibc 平台过滤 + musl 变体瘦身）；原生沙箱组件 `@deepseek-ai/node-addon-system` 0.1.2 由 registry 解析（预编译 addon）。
 - 组装环境：WSL2 Ubuntu 22.04（构建产物均为官方预编译二进制，不依赖构建机 glibc）。
 - 可复现流水线与文档：https://github.com/sinply/dsh-linux （一键打包：`powershell -File scripts\build-linux.ps1`）

@@ -153,10 +153,11 @@ OUT_DIR=… [SYSTEM_NODE=$STAGE/node24] bash scripts/linux-assemble/11-assemble-
 
 ### 3.6 冒烟验收标准
 
-- `bin/dsh --version` 输出目标版本（如 `0.1.5-rc.1`）
+- `bin/dsh --version` 输出目标版本（如 `0.1.7-rc.1`）
 - `06-smoke.sh` 全绿：landlock 探测 + 约束执行；**bwrap 解析自 `bin/bwrap`（包内静态）** + 探测 + 约束执行；`dsh web` 起服务并跟随重定向返回 200
 - `11-assemble-basic.sh` 对 basic / basic-slim 各自再做一次 web boot（版本 + 200）
-- 构建日志无 `node-gyp rebuild`（无安装期编译；0.1.5 起原生 system 包为预编译 Node-API addon，构建期不再需要 python/make）
+- 构建日志无 `node-gyp rebuild`（无安装期编译；原生 system 包为预编译 Node-API addon，构建期不再需要 python/make）
+- **`05-glibc-audit.sh` 必须逐条看**：上游新增的实验能力可能引入高于 Rocky 8 底线（2.28）的原生 addon —— 0.1.7-rc.1 就出现了 `sherpa-onnx`(2.32)、`cua-driver`(2.30)、`@ubjs/node`(2.30)。若它们被默认 profile 引用，就必须裁剪或另开变体，否则 Rocky 8 启动即失败。
 
 ## 4. 发布清单
 

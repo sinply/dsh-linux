@@ -8,7 +8,7 @@
 
 DeepSeek Harness 的 **内网离线 Linux 发行包**：把 dsh CLI、Node.js 运行时、全部依赖、Web 前端与沙箱组件（landlock-run + 静态 bwrap）打包成一个自包含目录，目标机 **解压即用、全程离线、零安装**。
 
-- 产物：`dsh-linux-x64.tar.gz`（349 MB，解压后约 1.2 GB）—— **dsh 0.1.5-rc.1**
+- 产物：`dsh-linux-x64.tar.gz`（440 MB，解压后约 1.5 GB）—— **dsh 0.1.7-rc.1**
 - 目标平台：Rocky Linux 8 / 9（x86_64），glibc ≥ 2.28
 - 上游：dsh = [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（MIT）；landlock-run 使用上游发布的平台预编译包（静态 musl）
 
@@ -18,14 +18,14 @@ DeepSeek Harness 的 **内网离线 Linux 发行包**：把 dsh CLI、Node.js �
 tar -xzf dsh-linux-x64.tar.gz
 cd dsh-linux-x64
 cat BUILD-INFO.txt         # 本包对应的 dsh 版本 / 上游 commit
-./bin/dsh --version        # 0.1.5-rc.1
+./bin/dsh --version        # 0.1.7-rc.1
 ./bin/dsh web              # Web GUI：访问启动输出里的 http://127.0.0.1:3080/?token=...
 ./bin/dsh web --no-open    # 无桌面/内网场景：不尝试自动打开浏览器
 ```
 
 无需安装 Node.js / npm / 其他系统依赖。沙箱组件已内置：Linux 优先走包内静态 `bin/bwrap`；landlock-run 为备用 rung。
 
-> **从 0.1.2-rc.1 升级？** 会话磁盘格式已从 V0 升到 V3：首次启动前请备份 `$DSH_HOME`，迁移后不要回退。破坏性变更（默认模型、`str_replace_editor`、原生包改名）见 [CHANGELOG.zh.md](CHANGELOG.zh.md)。
+> **从 0.1.5-rc.1 升级？** 会话磁盘格式已从 V3 升到 V4，并且 `$DSH_HOME/settings.yaml` 会被一次性导入并改名为 `settings.yaml.imported`。首次启动前请备份 `$DSH_HOME`，之后不要回退。完整破坏性变更见 [CHANGELOG.zh.md](CHANGELOG.zh.md)。
 
 > 个别 RHEL 8 内核默认关闭非特权 user namespace，会让 bwrap 探测失败。此时启用即可：
 > `sysctl -w kernel.unprivileged_userns_clone=1`（详见 [docs/usage.md](docs/usage.md#沙箱)）。
@@ -34,10 +34,10 @@ cat BUILD-INFO.txt         # 本包对应的 dsh 版本 / 上游 commit
 
 | 变体 | 安装包 | 适用条件 | 体积（实测） |
 |---|---|---|---|
-| 全包版（默认） | `dsh-linux-x64.tar.gz` | 内网机器**没有** Node：自带运行时，零安装 | 349 MB |
-| 精简版（系统 Node） | `dsh-linux-x64-slim.tar.gz` | 内网机器**已有** Node（≥ 22.19，推荐 24.x LTS；已实测 24.14.0） | 294 MB |
-| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 无 Node + 只用 API 提供商（砍子代理 CLI 二进制） | 252 MB |
-| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 有 Node + 只用 API 提供商 | 198 MB |
+| 全包版（默认） | `dsh-linux-x64.tar.gz` | 内网机器**没有** Node：自带运行时，零安装 | 440 MB |
+| 精简版（系统 Node） | `dsh-linux-x64-slim.tar.gz` | 内网机器**已有** Node（≥ 22.19，推荐 24.x LTS；已实测 24.14.0） | 386 MB |
+| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 无 Node + 只用 API 提供商（砍子代理 CLI 二进制） | 343 MB |
+| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 有 Node + 只用 API 提供商 | 288 MB |
 
 - **slim 系**：不内置 Node，`bin/dsh` 从 PATH（或 `DSH_NODE_BIN`）解析系统 node；其余与对应全包版一致。
 - **basic 系**：裁剪了 Claude Code / Codex 子代理的 CLI 可执行文件（`claude-agent-sdk-linux-x64`、`codex-linux-x64`，合计约 630 MB 解压；仅实际唤起对应 CLI 时才需要，且插件不在默认 web profile 中）。API 提供商、Web 前端、附件、沙箱、OTel 遥测全部保留。

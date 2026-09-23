@@ -12,7 +12,7 @@ Self-contained build of DeepSeek Harness for **Rocky Linux 8 / 9 (x86_64)**, gli
 | Component | Version | Notes |
 |---|---|---|
 | Node.js | v22.23.2 (linux-x64) | Official binary, glibc ≥ 2.28 |
-| dsh CLI | 0.1.5-rc.1 | all `@deepseek-ai/dsh` dependencies (linux-x64 resolution) incl. Web frontend |
+| dsh CLI | 0.1.7-rc.1 | all `@deepseek-ai/dsh` dependencies (linux-x64 resolution) incl. Web frontend |
 | Native sandbox | `@deepseek-ai/node-addon-system` 0.1.2 | static `landlock-run` launcher + prebuilt Node-API flock addon (glibc and musl) |
 | bubblewrap | 0.11.0 (static musl) | `bin/bwrap`, preferred Linux sandbox rung |
 
@@ -20,10 +20,10 @@ Self-contained build of DeepSeek Harness for **Rocky Linux 8 / 9 (x86_64)**, gli
 
 | Variant | Package | Size | When to use |
 |---|---|---|---|
-| Full (this package) | `dsh-linux-x64.tar.gz` | 349 MB | Intranet hosts without Node: bundled runtime, zero install |
-| Slim | `dsh-linux-x64-slim.tar.gz` | 294 MB | Hosts already run system Node (>= 22.19, 24.x LTS recommended; verified 24.14.0) |
-| Basic | `dsh-linux-x64-basic.tar.gz` | 252 MB | No Node + API providers only (subagent CLI binaries pruned) |
-| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | 198 MB | System Node + API providers only |
+| Full (this package) | `dsh-linux-x64.tar.gz` | 440 MB | Intranet hosts without Node: bundled runtime, zero install |
+| Slim | `dsh-linux-x64-slim.tar.gz` | 386 MB | Hosts already run system Node (>= 22.19, 24.x LTS recommended; verified 24.14.0) |
+| Basic | `dsh-linux-x64-basic.tar.gz` | 343 MB | No Node + API providers only (subagent CLI binaries pruned) |
+| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | 288 MB | System Node + API providers only |
 
 - **Slim**: no bundled Node; `bin/dsh` resolves system node from PATH (or `DSH_NODE_BIN`).
 - **Basic**: prunes the Claude Code / Codex subagent CLI executables (~630 MB extracted); API providers, Web frontend, attachments, sandbox, OTel telemetry kept. Switch back to Full if you need those CLIs.
@@ -36,7 +36,7 @@ tar -xzf dsh-linux-x64.tar.gz
 cd dsh-linux-x64
 
 cat BUILD-INFO.txt           # dsh version and upstream commit of this package
-./bin/dsh --version          # 0.1.5-rc.1
+./bin/dsh --version          # 0.1.7-rc.1
 ./bin/dsh web                # Web GUI: open http://127.0.0.1:3080/?token=... printed at startup
 ./bin/dsh web --no-open      # headless / intranet: do not open a browser
 DSH_HOME=/your/home ./bin/dsh web   # custom data dir (sessions, profiles); default ~/.dsh
@@ -44,19 +44,21 @@ DSH_HOME=/your/home ./bin/dsh web   # custom data dir (sessions, profiles); defa
 
 `bin/dsh` puts the bundled node (full variants) and `bin/` (static bwrap) on PATH; all child processes use the bundled runtime.
 
-## Upgrade notes (from 0.1.2-rc.1)
+## Upgrade notes (from 0.1.5-rc.1)
 
-- **The session on-disk format is now V3** (0.1.2-rc.1 was V0): the first launch with this package migrates an existing `DSH_HOME` once and writes the new generation. **Back up `$DSH_HOME` (default `~/.dsh`) first, and do not roll back to 0.1.2-rc.1 afterwards** — the older version cannot read migrated sessions.
-- Migration needs a writable home directory with free space; do not open the same `DSH_HOME` from two dsh processes at once.
-- The default Chat Completions model is now **`deepseek-flash`** (`DeepSeek-V41-Flash`). If your intranet gateway only serves the old model id, configure the model list explicitly under Settings → Providers.
-- `str_replace_editor` is no longer in the default profiles; file editing uses `read` / `write` / `edit`.
+- **The session on-disk format is now V4** (0.1.5-rc.1 was V3): the first launch with this package migrates an existing `DSH_HOME` once and writes the new generation. **Back up `$DSH_HOME` (default `~/.dsh`) first, and do not roll back to 0.1.5-rc.1 afterwards** — the repository ships no V4→V3 reverse migration, and the older version cannot read migrated sessions.
+- **`$DSH_HOME/settings.yaml` is imported once and renamed to `settings.yaml.imported`**; sections rejected by the current composition survive only in the renamed file. Back that file up too.
+- Presets became declarative profile patches: the old `roots` / `includeShippedRoot` / `includeUserRoot` / `USER_PRESET_DIR` and user preset directories are no longer read.
+- Config key `spill-policy.maxInlineBytes` → `maxInlineTokens`; `tool-ralph` is disabled by default.
+- The default model id is still `deepseek-flash` (displayed as `DeepSeek-V41-Flash`; the catalog now also lists `deepseek-v4-pro`).
 - Full list: `CHANGELOG.md` (repo: https://github.com/sinply/dsh-linux ).
 
 ## Compatibility (verified on the build host)
 
 - **Rocky Linux 8 / 9, x86_64**; glibc ≥ 2.28 (Rocky 8 = 2.28).
-- GLIBC symbol audit of every native binary: node-pty 2.28 (at the floor), koffi 2.17, rolldown 2.16, sharp 2.17, lightningcss 2.14, landlock/esbuild static — all ≤ 2.28.
-- Zero compile anywhere: from 0.1.5 the native sandbox package is a **prebuilt** Node-API addon, so neither the build host nor the target needs python/make/g++.
+- GLIBC symbol audit of the native binaries: node-pty 2.28 (at the floor), koffi 2.17, sharp 2.17, rolldown 2.16, lightningcss 2.14, `node-addon-require-builtin` 2.14, landlock/esbuild static — all ≤ 2.28.
+- **Exception (new in 0.1.7-rc.1)**: three native addons of experimental capabilities need a newer glibc and **cannot load on Rocky 8**: `sherpa-onnx` (speech-to-text) 2.32, `@trycua/cua-driver` (computer-use) 2.30, `@ubjs/node` (browser-use) 2.30. None is in the default profiles, so **default functionality (Web GUI, sessions, sandbox, model requests) is unaffected**; Rocky 9 (glibc ≥ 2.34) is unaffected.
+- Zero compile anywhere: the native sandbox package is a **prebuilt** Node-API addon, so neither the build host nor the target needs python/make/g++.
 - Smoke tests passed (WSL build host, kernel 6.6): landlock probe + confined run ✅; bwrap probe + confined run ✅; `dsh web` boot, token URL follows redirects to 200 ✅; all four variants boot ✅.
 
 ## Sandbox (important on Rocky 8)
@@ -104,4 +106,4 @@ It distinguishes DNS / port / TLS certificate (common for intranet self-signed) 
 
 ## Build record
 
-Built from the dsh source checkout (HEAD `2377c272a8` = `dsh-v0.1.5-rc.1`) via `build:official` + `release:pack`: 274 tarballs (265 dsh + 9 vendor); pnpm 9 install (linux-x64 glibc platform filter + musl-variant prune); the native sandbox package `@deepseek-ai/node-addon-system` 0.1.2 resolves from the registry (prebuilt addon). Assembled on WSL2 Ubuntu 22.04 (all artifacts are official prebuilt binaries, independent of the builder glibc). Reproducible pipeline + docs: https://github.com/sinply/dsh-linux (one-shot packaging: `powershell -File scripts\build-linux.ps1`).
+Built from the dsh source checkout (HEAD `46a7f68b09` = `dsh-v0.1.7-rc.1`, clean tracked tree) via `build:official` + `release:pack`: 318 tarballs (309 dsh + 9 vendor); pnpm 9 install (linux-x64 glibc platform filter + musl-variant prune); the native sandbox package `@deepseek-ai/node-addon-system` 0.1.2 resolves from the registry (prebuilt addon). Assembled on WSL2 Ubuntu 22.04 (all artifacts are official prebuilt binaries, independent of the builder glibc). Reproducible pipeline + docs: https://github.com/sinply/dsh-linux (one-shot packaging: `powershell -File scripts\build-linux.ps1`).

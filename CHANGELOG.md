@@ -9,6 +9,88 @@ This file records every dsh-linux package release. **The dsh-linux version track
 
 ---
 
+## 0.1.7-rc.1 — 2026-09-23
+
+**Upstream range**: `dsh-v0.1.5-rc.1` (`2377c272a8`, 2026-09-10) → `dsh-v0.1.7-rc.1` (`46a7f68b09`, 2026-09-23): 2213 non-merge commits plus 1095 merges, 7889 files, +1206887 / −128109 lines, passing through `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.6-alpha.1`, `0.1.6-alpha.2`, `0.1.7-alpha.1`, `0.1.7-alpha.2`.
+
+### Artifacts
+
+| Variant | File | Size | SHA-256 |
+|---|---|---|---|
+| Full (default) | `dsh-linux-x64.tar.gz` | 440 MB | `454d73696f28f6c26d01e6754f663aca5e9fd97a3d411883d6d86de05d55007d` |
+| Slim (system Node) | `dsh-linux-x64-slim.tar.gz` | 386 MB | `f869a9eb7b8cd5d040ade762c840d8a9ca134b2dd87138cfee06828ee7f9a5e9` |
+| Basic (bundled Node) | `dsh-linux-x64-basic.tar.gz` | 343 MB | `3b95dbdf9719f2770e904016316fc4717d76acdc78c792e38a5e94df15a99f17` |
+| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | 288 MB | `82a9219d0a7a69812371b6147231ab86d97c2db252df502c898485b939e68def` |
+
+Built 2026-09-23T15:26:44Z (UTC) from upstream commit `46a7f68b0922371ce7144b668b90e377d8e799f4` with a clean tracked tree (`upstreamDirty: false`). Hashes are this release's artifacts; `dist/linux/build-info.json` is authoritative and a local rebuild produces different hashes.
+
+**Sizes grew noticeably** versus 0.1.5-rc.1 (349→440 / 294→386 / 252→343 / 198→288 MB), driven by dependencies of the upstream capabilities added in this range (extracted): `@deepseek-ai/libreoffice-kit-wasm` **186 MB** (Office conversion), `@trycua/cua-driver-linux-x64-gnu` **42 MB** (computer-use), `sherpa-onnx-linux-x64` **32 MB** (speech-to-text), plus roughly 44 new packages.
+
+### Upgrade notes (read first)
+
+1. **Session on-disk format V3 → V4 (breaking).** `SESSION_FORMAT_VERSION` goes from `3` to `4` (`packages/core/session/src/types.ts`, introduced by `669b724a78`). This is the **first release that writes V4**.
+   - **Back up `$DSH_HOME` (default `~/.dsh`) before upgrading.**
+   - A new `session-format-v3-to-v4` migration package restores supported released V3 sessions as V4 without rewriting stored generations, but there is **no evidence of a reverse (V4→V3) migration** in the repository, so **do not roll back to 0.1.5-rc.1 after migrating**.
+   - Upstream's `docs/session-format-status.md` still records `latestReleasedVersion: 3` (evidence tag `dsh-v0.1.5-alpha.1`) at both tags, while a separate Finalization record now says `latestFinalizedVersion: 4`: V4 is finalized but the release record has not advanced. This package therefore writes one generation newer than the format upstream documents as released.
+2. **`$DSH_HOME/settings.yaml` is no longer a live configuration document.** After Settings starts and the Loader settles, a leftover `settings.yaml` is **imported once** into the matching profile-patch entries and renamed **`settings.yaml.imported`** before the first write; sections rejected by the current composition survive only in the renamed file. Back that file up before upgrading.
+3. **Presets were rebuilt as declarative profile patches (breaking).** The old `default` / `roots` / `includeShippedRoot` / `includeUserRoot` / `USER_PRESET_DIR` and the on-disk preset directory (`packages/preset/agent-presets/presets/`) are gone, replaced by four profile patches in `packages/bundle/web-app/presets/{cordis,minimal,ptc,standard}.patch.yml`; the new config fields are `selectedDefault` and `modeSelectionEnabled`. **User-created preset directories are no longer read**, and no automatic converter ships in the repository.
+4. **Config key renamed**: base `spill-policy` moves from `maxInlineBytes: 50000` to **`maxInlineTokens: 12500`**; existing overlays using the old key must be rewritten.
+5. **`tool-ralph` is disabled by default** (the base patch adds `disabled: true`; an overlay line re-enables it).
+6. **Package and directory changes**:
+   - Removed: `@deepseek-ai/dsh-settings-file`, `packages/e2b/*` (the whole E2B cloud sandbox family), `packages/code-runtime/*`, `workflow-worker-thread` (replaced by `ptc-runtime` + `workflow-ptc`), `packages/fs/tool-present` (moved under `packages/deliverables/`).
+   - Added: `dsh-settings` (seam), `dsh-config-editor`, `dsh-plugin-manager`, `dsh-hmr`, `dsh-authorization`, `dsh-deepseek-account*`, `dsh-mcp-resources`, `dsh-compaction-image-offload`, `dsh-ptc-runtime(-node)`, `dsh-workflow-ptc`, `dsh-agent-preset(-registry)`, `dsh-skill-office`, `dsh-tool-workspace-dependencies`, `dsh-ssh` / `dsh-sandbox-ssh` / `dsh-fs-ssh` / `dsh-subprocess-ssh`, `dsh-api-{account,job,terminal}-controller`, `dsh-document-office-to-pdf`, `dsh-session-format-v3-to-v4`, `dsh-product-telemetry-otel`.
+7. **Default model id is unchanged** (`deepseek-official` / `deepseek-flash`) but the catalog moved: `deepseek-flash` is now displayed as **`DeepSeek-V41-Flash`** (text+image, `systemPromptUpdate: in-history`), **`deepseek-v4-pro`** (`DeepSeek-V4-Pro`) was added, the old V4 Flash / V4 Flash Vision Exp defaults were removed, and the official DeepSeek adapter is now **Messages-only**.
+8. **Node engine requirement is unchanged**: `^22.19.0 || >=24.0.0` at both tags, and no package demands more — so the bundled **Node v22.23.2 still satisfies it** (the slim variants' system-Node requirement is unchanged too).
+9. **Internal dependencies are now exact-version pins**: the dsh family uses `workspace:*` (packed as exact versions) and vendor/native use `workspace:~`. This only affects third-party consumers (dsh packages can no longer be mixed across versions); the offline bundle is single-version as a whole.
+
+### New capabilities
+
+- **Web GUI**: reworked tool-process presentation (four work-detail modes; preparing / start / result stages; content-preparation progress for file mutations); conversation groups; extensible session menu; Team panel interactions and projection panel; deliverable review (compare one turn's changed files in a single tab, compare from the card); Excel / PDF / image preview; the settings "add model" flow merged into third-party and custom-API modes; DeepSeek account sign-in and Platform pages; plugin-owned localized metadata.
+- **Tools**: jobs unified behind `JobSpec` / `VisibleJobs` and one event stream, with human job kill; subagent delegation limits tightened (8 live continuable children, depth 1, 16 per root); a workspace-dependencies tool; deliverables split into their own package group; a persistent-terminal remote controller.
+- **MCP**: scoped resources with server instructions, modern protocol negotiation, the `mcp-resources` package.
+- **Plugins**: DSH peer compatibility is enforced with typed refusals; the plugin manager picks the first responsive public registry, offers mirror recovery for GitHub install failures, and prefers the mainland mirror on CN network exits; optional bundles (for example Auto review) ship switched off with install-dialog guidance.
+- **Network/egress**: `node-addon-require-builtin` moves to `^0.1.6` (linux-x64 uses the `-linux-x64-gnu` variant); the gateway gains `streamInboxBytes` (default 262144; overflow reports `gateway/uplink-overflow`); a new SSH backend family (`dsh-ssh` / `sandbox-ssh` / `fs-ssh` / `subprocess-ssh`).
+- **Sandbox and subprocess**: Linux cancellation settlement and scope convergence, hidden Windows console windows, tighter sandbox delete rights (ACL / Low integrity), pinned ACL source resolution.
+- **Telemetry**: a new product-event OTLP exporter package, with `DSH_TELEMETRY_DISABLED` as the opt-out.
+
+### Sandbox and intranet notes
+
+- The native sandbox package is **unchanged**: `@deepseek-ai/node-addon-system` and `-linux-x64` remain **0.1.2** (static Landlock launcher plus glibc/musl Node-API flock addons).
+- Bundled external subagent CLIs are **unchanged**: Claude Agent SDK `0.3.263`, `@anthropic-ai/sdk` `0.93.0`, `@openai/codex` `0.153.4`.
+- Intranet proxy support (`HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` / `NO_PROXY`) carries over from the previous release with the same limits: OTLP telemetry bypasses the proxy, `NO_PROXY` has no CIDR support, SOCKS is unsupported.
+- **Office conversion gained a third-party dependency**, `@deepseek-ai/libreoffice-kit@^0.1.0`, which has **no linux-x64 native platform package** (only `-wasm`), so Office conversion on linux-x64 takes the wasm path; its real capability is not separately verified in this release.
+
+### Packaging changes (this repository)
+
+- **Upstream release-family rule changed**: `scripts/release/families.ts` moved from "non-experimental packages plus an experimental allowlist" to `packages/*/*/package.json` + `apps/*/package.json` (the experimental policy is now a private denylist that is currently empty). **Every `packages/experimental/*` package is packed by default now**, which raised this build's dsh-family tarball count rose from 265 to 309.
+- Fixed two `build-linux.ps1` defects that only surface under Windows PowerShell 5.1: `Tee-Object` has no `-Encoding` parameter (added after the 0.1.5 run and first exercised here), and `upstreamDirty` counted untracked files as changes (now tracked modifications only).
+- The packaging/publishing flow is unchanged: `scripts/build-linux.ps1` (whole build) and `scripts/publish-release.ps1` (tag + GitHub release + asset upload with hash verification).
+
+### Verification
+
+Measured on the WSL2 Ubuntu 22.04 build host (kernel 6.6):
+
+- **All four variants report `0.1.7-rc.1`** from `bin/dsh --version`; each bundle carries `check-env.sh` and `BUILD-INFO.txt`.
+- **No local compilation**: zero `node-gyp rebuild` / `gyp ERR` hits in the install log; every native dependency is an official prebuilt artifact.
+- **Both sandbox rungs**: bundled static `bin/bwrap` probe + confined run pass ✅; `landlock-run` (`@deepseek-ai/node-addon-system-linux-x64@0.1.2`) probe + confined run pass ✅.
+- **Web boot**: each of the four variants started `dsh web` and its token URL returned **HTTP 200** after redirects ✅.
+- **GLIBC symbol audit (important change)**: most native binaries still stay at or below 2.28 (node-pty **2.28**, koffi 2.17, sharp 2.17, rolldown 2.16, lightningcss 2.14, `node-addon-require-builtin` 2.14, `node-addon-system`'s `bin/glibc/system.node` 2.4, landlock-run/esbuild static). **Three native addons added by this release exceed the 2.28 floor:**
+  - `sherpa-onnx-linux-x64@1.13.8` → **GLIBC_2.32** (speech-to-text)
+  - `@trycua/cua-driver-linux-x64-gnu@0.28.0` → **GLIBC_2.30** (computer-use)
+  - `@ubjs/node-linux-x64-gnu@0.31.0-3` → **GLIBC_2.30** (browser-use runtime)
+  - None of the three is referenced by any `packages/bundle/**/*.patch.yml`, so default functionality (Web GUI, sessions, sandbox, model requests) never loads them; on **Rocky 8 (glibc 2.28)** those three experimental capabilities fail from missing symbols. Rocky 9 (glibc ≥ 2.34) is unaffected.
+- **Artifact integrity**: the gzip stream and the bundled `BUILD-INFO.txt` of all four tarballs verified (correct variant marker and version).
+
+### Known limitations
+
+- `basic` / `basic-slim` still only prune the Claude Code and Codex subagent CLI executables; use `full` / `slim` when those subagents are needed.
+- The slim variants require a system Node ≥ 22.19 (24.x LTS recommended); `full` and `basic` bundle Node v22.23.2.
+- **Rocky 8 limits the new experimental capabilities**: the native addons for speech-to-text (sherpa-onnx), computer-use (cua-driver), and browser-use (ubjs) require glibc 2.30–2.32 and **cannot load on Rocky 8 (glibc 2.28)**. None is in the default profiles, so default functionality is unaffected. Rocky 9 is unaffected.
+- Rocky 8 (kernel 4.18) has no Landlock and uses bwrap; some kernels disable unprivileged user namespaces, requiring `sysctl -w kernel.unprivileged_userns_clone=1`.
+- Office conversion runs through the wasm path (no linux-x64 native package in libreoffice-kit) and was not separately exercised in this release.
+
+---
+
 ## 0.1.5-rc.1 — 2026-09-10
 
 **Upstream range**: `dsh-v0.1.2-rc.1` (`a66e470204`, 2026-09-03) → `dsh-v0.1.5-rc.1` (`2377c272a8`, 2026-09-10): 999 non-merge commits, 6892 files, +209941 / −59902 lines, passing through `0.1.3-alpha.1`, `0.1.3-alpha.2`, `0.1.5-alpha.1`, `0.1.5-alpha.2` (there is no 0.1.4.x).
