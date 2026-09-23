@@ -110,11 +110,13 @@ function Fail([string]$Text) { throw $Text }
 # Run a native command or a called script with every stream (including Write-Host)
 # captured in a log file while still streaming to the console. $LASTEXITCODE
 # decides success; native stderr is text, not a terminating error.
+# Tee-Object takes -FilePath on both PowerShell 5.1 and 7 (it has no -Encoding
+# before 6.0, so the log encoding stays the shell's default).
 function Invoke-Logged([string]$Label, [string]$LogFile, [scriptblock]$Command) {
   $previous = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    & $Command *>&1 | Tee-Object -FilePath $LogFile -Encoding utf8
+    & $Command *>&1 | Tee-Object -FilePath $LogFile
   } finally { $ErrorActionPreference = $previous }
   if ($LASTEXITCODE -ne 0) { Fail "$Label failed (exit $LASTEXITCODE) - log: $LogFile" }
 }
@@ -170,7 +172,9 @@ $upstreamCommit = (& git -C $HarnessRoot rev-parse HEAD).Trim()
 $upstreamShort = $upstreamCommit.Substring(0, 10)
 $upstreamTag = (& git -C $HarnessRoot describe --tags --abbrev=0 2>$null | Select-Object -First 1)
 if ($upstreamTag) { $upstreamTag = $upstreamTag.Trim() }
-$upstreamDirty = [bool](& git -C $HarnessRoot status --porcelain)
+# Tracked modifications only: an untracked handoff note in the checkout does not
+# change the packaged source.
+$upstreamDirty = [bool](& git -C $HarnessRoot status --porcelain --untracked-files=no)
 
 $npmSrc = Join-Path $HarnessRoot "dist\npm-$Suffix"
 $vendorSrc = Join-Path $HarnessRoot "dist\npm-vendor-$Suffix"
