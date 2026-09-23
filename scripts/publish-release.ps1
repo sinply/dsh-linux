@@ -188,10 +188,13 @@ if (-not $NotesFile) {
   for ($i = $start + 1; $i -lt $lines.Count; $i++) {
     if ($lines[$i] -match '^##\s') { $end = $i; break }
   }
+  # Version-agnostic on purpose: the upgrade details live in the changelog
+  # section below, so this preamble must not name a previous version or format
+  # number that goes stale on the next release.
   $summary = @(
     "Offline self-contained DeepSeek Harness bundles for Rocky Linux 8/9 (x86_64), glibc >= 2.28 - dsh $Version.",
     '',
-    'Upgrading from 0.1.2-rc.1? The session on-disk format moved V0 -> V3: back up `$DSH_HOME` before the first launch and do not roll back afterwards.',
+    'Upgrading from an earlier package? Back up `$DSH_HOME` before the first launch: session storage migrates one way, and a rollback cannot read migrated sessions. See the upgrade notes below.',
     'Independent third-party packaging project, not affiliated with DeepSeek.',
     '',
     '---',

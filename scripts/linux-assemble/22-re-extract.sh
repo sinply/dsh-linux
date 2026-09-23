@@ -5,15 +5,18 @@
 #
 # Optional env:
 #   OUT_DIR    deliverable dir (default: <this repo>/dist/linux)
-#   VARIANTS   subset of "full slim basic basic-slim" (default: all four)
+#   VARIANTS   subset of "full slim basic basic-slim" (default: all four);
+#              comma- or space-separated
 set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="${OUT_DIR:-$(cd "$HERE/../.." && pwd)/dist/linux}"
 VARIANTS="${VARIANTS:-full slim basic basic-slim}"
+VARIANTS="${VARIANTS//,/ }"   # accept comma-separated as well as space-separated
 cd "$OUT"
 
 extract() { # $1 = tarball, $2 = target dir
-  [ -f "$1" ] || { echo "skip (missing): $1"; return 0; }
+  # Fail loud: a typo in VARIANTS used to skip silently and leave stale dirs behind.
+  [ -f "$1" ] || { echo "ERROR: missing tarball $OUT/$1" >&2; exit 1; }
   local tmp="$2.tmp"
   rm -rf "$tmp" "$2"
   mkdir -p "$tmp"

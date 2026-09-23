@@ -62,6 +62,8 @@
 
 - **上游发布族规则变化**：`scripts/release/families.ts` 由「非实验包 + 实验白名单」改为 `packages/*/*/package.json` + `apps/*/package.json`（实验包策略变为当前为空的私有 denylist）。**所有 `packages/experimental/*` 现在默认都会打包**，本次 dsh 族 tarball 数由 265 增至 309。
 - 修复 `build-linux.ps1` 两处只在 PowerShell 5.1 下暴露的问题：`Tee-Object` 不支持 `-Encoding`（0.1.5 那轮之后新增，本次首次跑到才暴露）；`upstreamDirty` 误把未跟踪文件算作改动（现在只看跟踪文件的改动）。
+- 修复 `22-re-extract.sh` 的两个缺陷：`VARIANTS` 不接受逗号分隔（`build-linux.ps1 -Extract` 传的是逗号分隔，手动调用时曾静默什么都没做、留下旧版本的解压目录）；tarball 缺失时改为报错退出而不是静默跳过。
+- `publish-release.ps1` 的英文前言改为不含版本号/格式号的通用措辞（此前硬编码 "0.1.2-rc.1 / V0→V3"，会在后续版本里变成错误信息）。
 - 一键打包 / 发布会话流程不变：`scripts/build-linux.ps1`（构建全流程）与 `scripts/publish-release.ps1`（打 tag + GitHub release + 上传资产，含哈希校验）。
 
 ### 校验结论

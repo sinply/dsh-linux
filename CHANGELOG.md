@@ -64,6 +64,8 @@ Built 2026-09-23T15:26:44Z (UTC) from upstream commit `46a7f68b0922371ce7144b668
 
 - **Upstream release-family rule changed**: `scripts/release/families.ts` moved from "non-experimental packages plus an experimental allowlist" to `packages/*/*/package.json` + `apps/*/package.json` (the experimental policy is now a private denylist that is currently empty). **Every `packages/experimental/*` package is packed by default now**, which raised this build's dsh-family tarball count rose from 265 to 309.
 - Fixed two `build-linux.ps1` defects that only surface under Windows PowerShell 5.1: `Tee-Object` has no `-Encoding` parameter (added after the 0.1.5 run and first exercised here), and `upstreamDirty` counted untracked files as changes (now tracked modifications only).
+- Fixed two `22-re-extract.sh` defects: `VARIANTS` rejected comma-separated values (what `build-linux.ps1 -Extract` passes, so a manual run with commas silently did nothing and left the previous version's extracted directories in place), and a missing tarball now fails instead of being skipped silently.
+- `publish-release.ps1`'s English preamble is now version-agnostic (it previously hardcoded "0.1.2-rc.1 / V0 to V3", which turns into a wrong statement on every later release).
 - The packaging/publishing flow is unchanged: `scripts/build-linux.ps1` (whole build) and `scripts/publish-release.ps1` (tag + GitHub release + asset upload with hash verification).
 
 ### Verification
