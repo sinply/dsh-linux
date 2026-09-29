@@ -194,7 +194,7 @@ if (-not $NotesFile) {
   $summary = @(
     "Offline self-contained DeepSeek Harness bundles for Rocky Linux 8/9 (x86_64), glibc >= 2.28 - dsh $Version.",
     '',
-    'Upgrading from an earlier package? Back up `$DSH_HOME` before the first launch: session storage migrates one way, and a rollback cannot read migrated sessions. See the upgrade notes below.',
+    'Upgrading from an earlier package? Back up `$DSH_HOME` first. When a release changes the session format the migration is one way, and a rollback cannot read migrated sessions; not every release migrates - the upgrade notes below state what this one does.',
     'Independent third-party packaging project, not affiliated with DeepSeek.',
     '',
     '---',
