@@ -7,6 +7,71 @@
 
 ---
 
+## 0.2.0-rc.1 — 2026-09-29
+
+**上游范围**：`dsh-v0.1.7-rc.1`（`46a7f68b09`，2026-09-23）→ `dsh-v0.2.0-rc.1`（`4878cdabd8`，上游提交时间 2026-09-28T19:48:10+08:00）。该区间 391 个非合并提交 + 216 个合并提交、3838 个文件、+154719 / −100507 行；中间经过 `0.1.7-rc.2`（2026-09-24）。
+
+### 产物
+
+| 变体 | 文件 | 大小 | SHA-256 |
+|---|---|---|---|
+| 全包版（默认） | `dsh-linux-x64.tar.gz` | 437 MB | `a9dd8fc1f758f98565004dcd4354274f524b7549dd84b8bf83b2c154ab0280a9` |
+| 精简版（系统 Node） | `dsh-linux-x64-slim.tar.gz` | 383 MB | `202844b1801917a4e8491f01813d51109078a0d9da3b49e14c97d12913aa5389` |
+| Basic 全包版 | `dsh-linux-x64-basic.tar.gz` | 340 MB | `d4194dc0790edcbe30e8c6404ee265b104a51666480086a8443bc4085820dd80` |
+| Basic 精简版 | `dsh-linux-x64-basic-slim.tar.gz` | 285 MB | `5d9d9d1b4e927352c78602ffaca055e94878371364355adf8b17edd4631dd815` |
+
+构建时间 2026-09-29T08:38:47Z（UTC）；上游 commit `4878cdabd87d4041bdaff61d04c966883b9fd07a`；工作树干净（`upstreamDirty: false`）。哈希为本次发行的产物值，完整清单以 `dist/linux/build-info.json` 为准（重新构建会产生不同的哈希）。
+
+**体积与 0.1.7-rc.1 基本持平并略降**（440→437 / 386→383 / 343→340 / 288→285 MB）：本区间没有新增平台特定依赖或原生二进制，新增的 9 个包都是纯 JS，整体只受 OpenTelemetry / got 等第三方 JS 依赖影响。
+
+### 升级注意
+
+1. **本次不需要会话或数据库迁移**：`SESSION_FORMAT_VERSION` 仍为 **4**（0.1.7-rc.1 已升到 V4），SQLite schema 也未变（`session-query` 8、`storage` 1），且没有新增 `session-format-vN-to-vM` 迁移包。从 0.1.7-rc.1 升级只需解压新目录换用；`DSH_HOME` 无需额外处理（仍建议照常备份）。
+2. **DeepSeek 适配器拆包（本次最需要动作的改名）**：出厂组合里 `id: llm-deepseek` 行的 `name` 由 `@deepseek-ai/dsh-llm-deepseek` 改为 **`@deepseek-ai/dsh-llm-deepseek-api-key`**（provider 仍为 `deepseek-official`，`apiKeyEnv` 默认 `DEEPSEEK_API_KEY`），并新增 **`id: llm-deepseek-account`**（`@deepseek-ai/dsh-llm-deepseek-account`，provider `deepseek-account`）。**自定义 overlay / profile patch 若按旧包名引用或覆盖这一行，必须改名**；`@deepseek-ai/dsh-llm-deepseek` 现在只是 Messages 协议实现，不再是 provider 插件。
+3. **配置键退役**：`agent-preset-registry` 的 **`modeSelectionEnabled`** 不再是声明字段（`docs/config-catalog.md` 中已消失）。旧 patch 携带它**不报错也不生效**；新任务模式选择改由客户端的 `developerTools` 控制。
+4. **Schedule 退出默认 Web 组合**：`packages/bundle/web-app/cordis.patch.yml` 移除了 `ui-schedule` 行（并在 `package.json` 去掉该依赖）。随发行版交付的组合**不含 `time-context` / `schedule` / `ui-schedule`**；需要时安装可选 bundle **`@deepseek-ai/dsh-experimental-schedule-bundle`**，或在 profile 的 `dsh.profile.bundles` 中列出。
+5. **遥测与产品分析（内网部署请确认）**：base 新增 `id: otel` 行（新包 `@deepseek-ai/dsh-otel`，为普通事件与 Session 日志提供独立通道、按字节上限分批）；`session-telemetry` 的**默认 OTLP 端点改为 `https://dsh-otel-collector.deepseeksvc.com/v1/logs`** 并新增 `maxRequestBytes: 4000000`（按字节分批、串行发送，3 秒关停上限内可能丢弃未发送记录）；web-app 新增 desktop 专用的 `desktop-product-telemetry` 与 `product-analytics` 行（导出目的地可用可选变量 `DSH_PRODUCT_ANALYTICS_OTLP_URL` 覆盖，不设则用默认）。离线内网如需完全静默，请按 `DSH_TELEMETRY_DISABLED` 或组合配置处理。
+6. **原生依赖精确固定**：koffi `^3.1.0 → 3.1.1`（7 个包统一精确固定，上游理由是 Koffi 3.3.2 在 GCC 13 下源码构建失败）；`@deepseek-ai/libreoffice-kit` `^0.1.0 → ^0.1.1`（linux 侧仍是 `-wasm`）。
+7. **仓库脚本删除（只影响从源码构建）**：`scripts/merge-translation-pairing*.ts`、`scripts/translation-pairing-merge*`、`scripts/gen-cordis-catalog-record.spec.ts` 与根 npm script `resolve-translation-pairing-conflicts`，以及示例配置 `apps/cli/config/examples/schedule/cordis.yml`。本仓库的 `build-linux.ps1` 流水线**不依赖**这些脚本，无需改动。
+8. **未变项**：Node 引擎要求（`^22.19.0 || >=24.0.0`，包内 Node v22.23.2 仍满足）、`packageManager`（pnpm@11.7.0）、原生沙箱包 `@deepseek-ai/node-addon-system` 0.1.2、捆绑子代理 CLI（Codex `0.153.4`、Claude Agent SDK `0.3.263`）、默认模型（`deepseek-official` / `deepseek-flash`）。
+
+### 新能力
+
+- **Web GUI**：快捷键可配置（新包 `dsh-client-shortcuts` / `dsh-client-ui-shortcuts`，已加入出厂 Web 组合）；General 设置新增 **Session Log 上传偏好**（新包 `dsh-client-ui-settings-session-log`，取代原来的 schedule 面板位置）；新增 `developerTools` 设置键并统一控制新任务模式选择；「开发者工具」更名为**「代码工作工具」**；会话列表归档筛选改为显式三选菜单 + 带图标空状态；插件管理页安装交互、官方分组与 Registry 键盘选择改进（含 Auto review / Inspector 安装引导）；模型选择增加待选 spinner、保留 effort、账号模型优先；反馈问卷预填账号、版本与桌面设备；转录下方鲸鱼尾动画与进程行 shimmer 等运行态细节；大量视觉收敛（焦点环统一品牌蓝、tooltip/焦点环输入模态规则、Office/PDF 选区在两种主题下可见、覆盖层避让 Windows 标题栏）；**0.2 预览提示改为必须确认**。
+- **工具**：新增 **`schedule_update`**（工具目录 69 → 70），Schedule 工具集变为 create/delete/list/update 并支持 daily/weekly 显式 IANA 时区与五段式 cron；用户提问支持定时等待与迟到回复；`send_message` / `job_kill` / `read_image` 描述精简、系统提示去掉重复工具定义；`web_fetch` 折叠 URL 可点击；代码语言表统一到新包 `dsh-util-code-language`。
+- **会话与循环**：Schedule 持久化改挂 Host storage domain（新增持久化变更记录：调度记录 `title` 变为可选）；`llm` 支持动态工具更新并按路由投影；工具输出截断保留代理对；`atomic-write` 可接管已退出持有者的写锁；WebKit 原生化文本格式兼容修复。
+- **账号与凭据**：推理 401、Platform 响应码、被拒的推理 token 等场景触发登出/过期并隐藏已登出的 provider；余额与赠送通知（请求超时 30 秒、支持指数形式余额、通知不重放）；`web-search-deepseek` 的账号路由会话改用账号 token 鉴权。
+- **沙箱**：本区间几乎全是 Windows 侧改进（ACL 诊断技能、继承 ACL 修复、被拒后请求升级、显式窗口可见性等）；Linux 侧只有版本与测试改动。
+- **MCP / hooks**：无功能变化（仅版本号与 i18n README）。
+
+### 打包工程（dsh-linux 侧）
+
+- 上游发布族 glob 未变（`packages/*/*/package.json` + `apps/*/package.json`），**9 个新包自动纳入** dsh 家族：`client/product-analytics`、`client/shortcuts`、`client/ui-settings-session-log`、`client/ui-shortcuts`、`experimental/schedule-bundle`、`llm/llm-deepseek-account`、`llm/llm-deepseek-api-key`、`telemetry/otel`、`util/code-language`。本次 dsh 族 tarball 数由 309 变为 318。
+- **本次没有新增平台特定依赖**（无新增 `optionalDependencies`、无新增带 `os`/`cpu`/`libc` 的包、无新增 `.node`/`.so`/`.wasm` 文件），因此 linux-x64 的解析集合只多了这些纯 JS 新包与 OpenTelemetry / got 等第三方依赖。
+- 本仓库打包脚本本次**未做修改**：上一版修复的 `build-linux.ps1`（PowerShell 5.1 兼容）与 `22-re-extract.sh`（逗号分隔 `VARIANTS`）已在本轮直接生效。
+
+### 校验结论
+
+本次构建在 WSL2 Ubuntu 22.04（内核 6.6）上实测：
+
+- **四个变体的 `bin/dsh --version` 均为 `0.2.0-rc.1`**；包内 `check-env.sh` 与 `BUILD-INFO.txt` 齐备。
+- **零本地编译**：安装日志中 `node-gyp rebuild` / `gyp ERR` 命中数为 0；全部原生依赖走官方预编译产物。
+- **沙箱两 rung**：包内静态 `bin/bwrap` 探测 + 约束执行通过 ✅；`landlock-run`（`@deepseek-ai/node-addon-system-linux-x64@0.1.2`）探测 + 约束执行通过 ✅（WSL 内核 ABI 较旧，报告 `partially enforced (older ABI)`）。
+- **Web 启动**：四个变体分别启动 `dsh web`，token URL 跟随重定向返回 **HTTP 200** ✅（basic / basic-slim 的裁剪后启动也各自通过）。
+- **GLIBC 符号审计与 0.1.7-rc.1 相同**：node-pty **2.28**（踩线）、koffi **3.1.1 → 2.17**、sharp 2.17、rolldown 2.16、`node-addon-require-builtin` 2.14、lightningcss 2.14、`node-addon-system` 的 `bin/glibc/system.node` 2.4、landlock-run/esbuild 静态 —— 默认功能全部 ≤ 2.28。上一版标注为 `[待核实]` 的 koffi 基线本次实测确认为 **2.17**（升级到 3.1.1 未抬高 glibc 要求）。
+- **三个实验能力的 addon 仍超 2.28 底线**：`sherpa-onnx-linux-x64@1.13.8` → **GLIBC_2.32**（语音转写）、`@trycua/cua-driver-linux-x64-gnu@0.28.0` → **GLIBC_2.30**（computer-use）、`@ubjs/node-linux-x64-gnu@0.31.0-3` → **GLIBC_2.30**（browser-use）。三者仍**不在默认 profile**，Rocky 8 默认功能不受影响。
+- **产物完整性**：四个 tar.gz 的 gzip 流校验与包内 `BUILD-INFO.txt` 内容校验通过（变体标记与版本正确）。
+
+### 已知限制
+
+- `basic` / `basic-slim` 仍然只裁剪 Claude Code 与 Codex 子代理的 CLI 可执行文件；需要这两个子代理时请用 `full` / `slim`。
+- slim 系需要目标机自带 Node ≥ 22.19（推荐 24.x LTS）；full / basic 自带 Node v22.23.2。
+- **Rocky 8 上的实验能力限制（沿用上一版）**：语音转写（sherpa-onnx，需 glibc 2.32）、computer-use（cua-driver，2.30）、browser-use（ubjs，2.30）的原生 addon 无法在 Rocky 8（glibc 2.28）加载；它们不在默认 profile 中，默认功能不受影响。Rocky 9 不受限。
+- 遥测/产品分析默认指向公网 collector 域名（`dsh-otel-collector.deepseeksvc.com`）；离线内网下这些上报只会静默失败，如需彻底关闭请用 `DSH_TELEMETRY_DISABLED` 或调整组合。
+- Office 转换为 wasm 路径（libreoffice-kit 无 linux-x64 原生包）。
+
+---
+
 ## 0.1.7-rc.1 — 2026-09-23
 
 **上游范围**：`dsh-v0.1.5-rc.1`（`2377c272a8`，2026-09-10）→ `dsh-v0.1.7-rc.1`（`46a7f68b09`，2026-09-23）。该区间 2213 个非合并提交 + 1095 个合并提交、7889 个文件、+1206887 / −128109 行；中间经过 `0.1.5-rc.2`、`0.1.5-rc.3`、`0.1.6-alpha.1`、`0.1.6-alpha.2`、`0.1.7-alpha.1`、`0.1.7-alpha.2`。

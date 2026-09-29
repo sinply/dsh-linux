@@ -77,15 +77,14 @@ Linux 沙箱运行链：**bwrap（首选）→ landlock-run（备用）**，逐�
 
 新版本发行包是完整自包含目录：解压新包后用新目录启动即可。旧数据在 `DSH_HOME`，可继续沿用。
 
-**从 0.1.5-rc.1 升级到 0.1.7-rc.1 的额外注意**：
+**从 0.1.7-rc.1 升级到 0.2.0-rc.1 的额外注意**：
 
-- 0.1.7-rc.1 的会话磁盘格式为 **V4**（0.1.5-rc.1 为 V3）。首次用新版打开旧 `DSH_HOME` 会做一次性迁移并写入新代际，
-  已提交的历史代际字节不变。
-- **升级前备份 `$DSH_HOME`（默认 `~/.dsh`）**；迁移要求该目录可写、磁盘余量充足。
-- **迁移后不要回退到 0.1.5-rc.1**：仓库内没有 V4→V3 的反向迁移，旧版本读不了迁移后的会话。
-- **`$DSH_HOME/settings.yaml` 会被一次性导入并改名为 `settings.yaml.imported`**；被当前组合拒绝的 section 只保留在改名后的文件里。升级前请一并备份。
-- 预设机制改为声明式 profile patch：旧的 `roots` / `includeShippedRoot` / `includeUserRoot` / `USER_PRESET_DIR` 与自建预设目录都不再被读取。
-- 其他破坏性变更（`spill-policy.maxInlineBytes` → `maxInlineTokens`、`tool-ralph` 默认禁用）见 `CHANGELOG.zh.md`。
+- **本次不需要会话或数据库迁移**：会话磁盘格式仍为 **V4**（0.1.7-rc.1 已完成 V3→V4 迁移），SQLite schema 未变，也没有新的迁移包。直接解压新包换用即可；`DSH_HOME` 无需特殊处理（仍建议照常备份）。
+- **DeepSeek 适配器拆包**：出厂组合 `id: llm-deepseek` 的包名由 `@deepseek-ai/dsh-llm-deepseek` 改为 `@deepseek-ai/dsh-llm-deepseek-api-key`，并新增 `id: llm-deepseek-account`。自定义 overlay / profile patch 若按旧包名引用，需要改名。
+- **配置键 `modeSelectionEnabled` 退役**（旧 patch 携带不生效）；新任务模式选择由客户端 `developerTools` 控制。
+- **Schedule 退出默认 Web 组合**：随包组合不含 `time-context` / `schedule` / `ui-schedule`，需要时安装可选 bundle `@deepseek-ai/dsh-experimental-schedule-bundle`。
+- **遥测默认端点变更**为 `https://dsh-otel-collector.deepseeksvc.com/v1/logs`，并新增按字节分批（`maxRequestBytes: 4000000`）；离线内网如需完全关闭用 `DSH_TELEMETRY_DISABLED`。
+- 完整清单见 `CHANGELOG.zh.md`。
 
 ## 6. 故障排查
 
@@ -137,8 +136,8 @@ DSH_NODE_BIN=/usr/local/node-v24/bin/node ./bin/dsh web
 
 | 包 | 体积 | 相比默认 |
 |---|---|---|
-| `dsh-linux-x64-basic.tar.gz`（自带 Node） | **343 MB** | -22% |
-| `dsh-linux-x64-basic-slim.tar.gz`（系统 Node） | **288 MB** | -25%（对比 slim） |
+| `dsh-linux-x64-basic.tar.gz`（自带 Node） | **340 MB** | -22% |
+| `dsh-linux-x64-basic-slim.tar.gz`（系统 Node） | **285 MB** | -26%（对比 slim） |
 
 **裁剪内容与限制**：
 

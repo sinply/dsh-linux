@@ -9,6 +9,71 @@ This file records every dsh-linux package release. **The dsh-linux version track
 
 ---
 
+## 0.2.0-rc.1 — 2026-09-29
+
+**Upstream range**: `dsh-v0.1.7-rc.1` (`46a7f68b09`, 2026-09-23) → `dsh-v0.2.0-rc.1` (`4878cdabd8`, upstream commit time 2026-09-28T19:48:10+08:00): 391 non-merge commits plus 216 merges, 3838 files, +154719 / −100507 lines, passing through `0.1.7-rc.2` (2026-09-24).
+
+### Artifacts
+
+| Variant | File | Size | SHA-256 |
+|---|---|---|---|
+| Full (default) | `dsh-linux-x64.tar.gz` | 437 MB | `a9dd8fc1f758f98565004dcd4354274f524b7549dd84b8bf83b2c154ab0280a9` |
+| Slim (system Node) | `dsh-linux-x64-slim.tar.gz` | 383 MB | `202844b1801917a4e8491f01813d51109078a0d9da3b49e14c97d12913aa5389` |
+| Basic (bundled Node) | `dsh-linux-x64-basic.tar.gz` | 340 MB | `d4194dc0790edcbe30e8c6404ee265b104a51666480086a8443bc4085820dd80` |
+| Basic slim | `dsh-linux-x64-basic-slim.tar.gz` | 285 MB | `5d9d9d1b4e927352c78602ffaca055e94878371364355adf8b17edd4631dd815` |
+
+Built 2026-09-29T08:38:47Z (UTC) from upstream commit `4878cdabd87d4041bdaff61d04c966883b9fd07a` with a clean tracked tree (`upstreamDirty: false`). Hashes are this release's artifacts; `dist/linux/build-info.json` is authoritative and a local rebuild produces different hashes.
+
+**Sizes are essentially flat and slightly smaller than 0.1.7-rc.1** (440→437 / 386→383 / 343→340 / 288→285 MB): this range added no platform-specific dependency and no new native binary; the nine new packages are pure JavaScript, so only third-party JS dependencies (OpenTelemetry, got) moved the total.
+
+### Upgrade notes
+
+1. **No session or database migration this time.** `SESSION_FORMAT_VERSION` stays at **4** (0.1.7-rc.1 introduced V4), the SQLite schemas are unchanged (`session-query` 8, `storage` 1), and no new `session-format-vN-to-vM` package appeared. Upgrading from 0.1.7-rc.1 is just "extract the new directory and run"; `DSH_HOME` needs no special handling (still back it up as usual).
+2. **The DeepSeek adapter was split (the rename that needs action)**: in the shipped composition the `id: llm-deepseek` line's `name` changed from `@deepseek-ai/dsh-llm-deepseek` to **`@deepseek-ai/dsh-llm-deepseek-api-key`** (provider stays `deepseek-official`, `apiKeyEnv` defaults to `DEEPSEEK_API_KEY`), and a new **`id: llm-deepseek-account`** line (`@deepseek-ai/dsh-llm-deepseek-account`, provider `deepseek-account`) was added. **Any custom overlay or profile patch that references or overrides that line by the old package name must be renamed**; `@deepseek-ai/dsh-llm-deepseek` is now only the Messages protocol implementation, not a provider plugin.
+3. **Config key retired**: `agent-preset-registry`'s **`modeSelectionEnabled`** is no longer a declared field (it disappeared from `docs/config-catalog.md`). An old patch carrying it neither errors nor takes effect; new-task mode selection is now controlled by the client's `developerTools`.
+4. **Schedule left the default web composition**: `packages/bundle/web-app/cordis.patch.yml` dropped the `ui-schedule` line (and its dependency). The shipped composition **no longer contains `time-context` / `schedule` / `ui-schedule`**; install the optional bundle **`@deepseek-ai/dsh-experimental-schedule-bundle`** or list it in the profile's `dsh.profile.bundles` when needed.
+5. **Telemetry and product analytics (verify for intranet deployments)**: the base patch gained an `id: otel` line (new package `@deepseek-ai/dsh-otel`, a separate channel for ordinary events and Session logs with byte-bounded batching); `session-telemetry`'s **default OTLP endpoint changed to `https://dsh-otel-collector.deepseeksvc.com/v1/logs`** and gained `maxRequestBytes: 4000000` (byte-bounded, serial sends; records may be dropped inside the 3 second shutdown deadline); the web-app bundle added `desktop-product-telemetry` and `product-analytics` lines (desktop profile only; the export destination can be overridden with the optional `DSH_PRODUCT_ANALYTICS_OTLP_URL`). Use `DSH_TELEMETRY_DISABLED` or your composition when an offline intranet must stay fully silent.
+6. **Native dependencies pinned exactly**: koffi `^3.1.0 → 3.1.1` (pinned in seven packages; upstream's reason is that Koffi 3.3.2 fails a from-source build under GCC 13) and `@deepseek-ai/libreoffice-kit` `^0.1.0 → ^0.1.1` (the linux side is still `-wasm`).
+7. **Repository scripts removed (source builds only)**: `scripts/merge-translation-pairing*.ts`, `scripts/translation-pairing-merge*`, `scripts/gen-cordis-catalog-record.spec.ts`, the root `resolve-translation-pairing-conflicts` npm script, and the example config `apps/cli/config/examples/schedule/cordis.yml`. This repository's `build-linux.ps1` pipeline **does not depend on them**.
+8. **Unchanged**: Node engine requirement (`^22.19.0 || >=24.0.0`; the bundled Node v22.23.2 still satisfies it), `packageManager` (pnpm@11.7.0), the native sandbox package `@deepseek-ai/node-addon-system` 0.1.2, the bundled subagent CLIs (Codex `0.153.4`, Claude Agent SDK `0.3.263`), and the default model (`deepseek-official` / `deepseek-flash`).
+
+### New capabilities
+
+- **Web GUI**: configurable keyboard shortcuts (new `dsh-client-shortcuts` / `dsh-client-ui-shortcuts` packages, now in the shipped web composition); a **Session Log upload preference** in General settings (new `dsh-client-ui-settings-session-log` package, in the slot the schedule panel used to occupy); a new `developerTools` settings key that also governs new-task mode selection; "Developer tools" renamed to **"Code work tools"**; conversation-list archive filtering as an explicit three-choice menu with icon empty states; plugin-manager install interactions, official grouping and Registry keyboard selection (including Auto review / Inspector install guidance); model selection gained a pending spinner, effort retention and account-model priority; the feedback survey pre-fills account, version and desktop device; running-state polish (whale-tail animation, process-row shimmer); a broad visual pass (unified brand-blue focus rings, tooltip/focus-ring input-modality rules, Office/PDF selection visible in both themes, overlays avoiding the Windows title bar); **the 0.2 preview notice now requires acknowledgement**.
+- **Tools**: new **`schedule_update`** (tool catalog 69 → 70); the schedule tool set is now create/delete/list/update with explicit IANA time zones for daily/weekly and five-field cron; user questions support timed waiting and late replies; trimmed `send_message` / `job_kill` / `read_image` descriptions and removed duplicate tool definitions from the system prompt; `web_fetch` collapsed URLs are clickable; the code-language table moved to the new `dsh-util-code-language` package.
+- **Sessions and loop**: schedule persistence moved onto the host storage domain (new persistence-change record: a schedule record's `title` is now optional); `llm` emits dynamic tool updates projected per route; tool-output truncation preserves surrogate pairs; `atomic-write` can take over a lock whose holder exited; WebKit native-constructor text format compatibility fix.
+- **Account and credentials**: inference 401s, Platform response codes and rejected inference tokens now sign out or expire the account and hide signed-out providers; balance and bonus notifications (30 second request timeout, exponential-notation balances, non-replayed delivery); `web-search-deepseek`'s account route authenticates with the account token.
+- **Sandbox**: almost entirely Windows-side in this range (ACL diagnostic skill, inherited-ACL fixes, escalate-after-denial, explicit window visibility); Linux only saw version and test changes.
+- **MCP / hooks**: no functional change (version and i18n README only).
+
+### Packaging changes (this repository)
+
+- Upstream's release-family glob is unchanged (`packages/*/*/package.json` + `apps/*/package.json`), so **nine new packages joined the dsh family automatically**: `client/product-analytics`, `client/shortcuts`, `client/ui-settings-session-log`, `client/ui-shortcuts`, `experimental/schedule-bundle`, `llm/llm-deepseek-account`, `llm/llm-deepseek-api-key`, `telemetry/otel`, `util/code-language`. The dsh-family tarball count went from 309 to 318.
+- **No new platform-specific dependency this time** (no new `optionalDependencies`, nothing new carrying `os`/`cpu`/`libc`, and no new `.node` / `.so` / `.wasm` files), so the linux-x64 resolution set only grew by the pure-JS packages above plus third-party OpenTelemetry and got dependencies.
+- No packaging script changed in this round: the previous release's fixes to `build-linux.ps1` (PowerShell 5.1) and `22-re-extract.sh` (comma-separated `VARIANTS`) applied as-is.
+
+### Verification
+
+Measured on the WSL2 Ubuntu 22.04 build host (kernel 6.6):
+
+- **All four variants report `0.2.0-rc.1`** from `bin/dsh --version`; each bundle carries `check-env.sh` and `BUILD-INFO.txt`.
+- **No local compilation**: zero `node-gyp rebuild` / `gyp ERR` hits in the install log; every native dependency is an official prebuilt artifact.
+- **Both sandbox rungs**: bundled static `bin/bwrap` probe + confined run pass ✅; `landlock-run` (`@deepseek-ai/node-addon-system-linux-x64@0.1.2`) probe + confined run pass ✅ (the WSL kernel reports `partially enforced (older ABI)`).
+- **Web boot**: each of the four variants started `dsh web` and its token URL returned **HTTP 200** after redirects ✅ (the pruned basic variants boot too).
+- **GLIBC symbol audit matches 0.1.7-rc.1**: node-pty **2.28** (at the floor), koffi **3.1.1 → 2.17**, sharp 2.17, rolldown 2.16, `node-addon-require-builtin` 2.14, lightningcss 2.14, `node-addon-system`'s `bin/glibc/system.node` 2.4, landlock-run/esbuild static — everything reachable by default functionality stays ≤ 2.28. The koffi baseline that the previous release marked `[待核实]` is now measured: **2.17**, so the 3.1.1 bump did not raise its glibc requirement.
+- **The three experimental addons still exceed the 2.28 floor**: `sherpa-onnx-linux-x64@1.13.8` → **GLIBC_2.32** (speech-to-text), `@trycua/cua-driver-linux-x64-gnu@0.28.0` → **GLIBC_2.30** (computer-use), `@ubjs/node-linux-x64-gnu@0.31.0-3` → **GLIBC_2.30** (browser-use). None is referenced by the default profiles, so Rocky 8 default functionality is unaffected.
+- **Artifact integrity**: the gzip stream and bundled `BUILD-INFO.txt` of all four tarballs verified (correct variant marker and version).
+
+### Known limitations
+
+- `basic` / `basic-slim` still only prune the Claude Code and Codex subagent CLI executables; use `full` / `slim` when those subagents are needed.
+- The slim variants require a system Node ≥ 22.19 (24.x LTS recommended); `full` and `basic` bundle Node v22.23.2.
+- **Rocky 8 limits the new experimental capabilities (carried over)**: the native addons for speech-to-text (sherpa-onnx, needs glibc 2.32), computer-use (cua-driver, 2.30) and browser-use (ubjs, 2.30) cannot load on Rocky 8 (glibc 2.28). None is in the default profiles, so default functionality is unaffected. Rocky 9 is unaffected.
+- Telemetry and product analytics default to a public collector domain (`dsh-otel-collector.deepseeksvc.com`); on an air-gapped network those uploads simply fail silently — use `DSH_TELEMETRY_DISABLED` or your composition to turn them off.
+- Office conversion runs through the wasm path (no linux-x64 native package in libreoffice-kit).
+
+---
+
 ## 0.1.7-rc.1 — 2026-09-23
 
 **Upstream range**: `dsh-v0.1.5-rc.1` (`2377c272a8`, 2026-09-10) → `dsh-v0.1.7-rc.1` (`46a7f68b09`, 2026-09-23): 2213 non-merge commits plus 1095 merges, 7889 files, +1206887 / −128109 lines, passing through `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.6-alpha.1`, `0.1.6-alpha.2`, `0.1.7-alpha.1`, `0.1.7-alpha.2`.
